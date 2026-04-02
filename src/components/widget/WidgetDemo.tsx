@@ -8,6 +8,13 @@ import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
+function findLastIdx<T>(arr: T[], predicate: (item: T) => boolean): number {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (predicate(arr[i])) return i;
+  }
+  return -1;
+}
+
 // Configure media URLs here
 const WELCOME_VIDEO_URL = ""; // e.g. "/intakeapp/videos/welcome.mp4"
 const CONNECTING_VIDEO_URL = ""; // e.g. "/intakeapp/videos/connecting.mp4"
@@ -91,6 +98,7 @@ export function WidgetDemo() {
   const [lang, setLang] = useState<Lang>("en");
   const [restored, setRestored] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [stepHistory, setStepHistory] = useState<string[]>([]);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const t = translations[lang];
@@ -204,8 +212,49 @@ export function WidgetDemo() {
     setFirstName("");
     setLastName("");
     const nextKey = step ? getNextStepKey(step, nextAnswers) : null;
-    if (nextKey) setCurrentKey(nextKey);
+    if (nextKey) {
+      setStepHistory((prev) => [...prev, currentKey]);
+      setCurrentKey(nextKey);
+    }
   };
+
+  function handleBack() {
+    if (stepHistory.length === 0 || typing) return;
+    const prevKey = stepHistory[stepHistory.length - 1];
+
+    // Remove the last user message and the current bot message
+    setMessages((prev) => {
+      const filtered = [...prev];
+      // Remove current step's bot message
+      const botIdx = findLastIdx(filtered, (m) => m.role === "bot" && m.stepKey === currentKey);
+      if (botIdx >= 0) filtered.splice(botIdx, 1);
+      // Remove the user answer that led to this step
+      const userIdx = findLastIdx(filtered, (m) => m.role === "user" && m.stepKey === prevKey);
+      if (userIdx >= 0) filtered.splice(userIdx, 1);
+      return filtered;
+    });
+
+    // Remove answer for the previous step
+    const prevStep = DEFAULT_FLOW.steps.find((s) => s.key === prevKey);
+    if (prevStep?.fieldKey) {
+      setAnswers((prev) => {
+        const next = { ...prev };
+        delete next[prevStep.fieldKey!];
+        return next;
+      });
+    }
+    if (prevKey === "full_name") {
+      setAnswers((prev) => {
+        const next = { ...prev };
+        delete next.first_name;
+        delete next.last_name;
+        return next;
+      });
+    }
+
+    setStepHistory((prev) => prev.slice(0, -1));
+    setCurrentKey(prevKey);
+  }
 
   if (!step) {
     return <div className="widget-card"><div className="chat-thread">Flow error: missing step.</div></div>;
@@ -224,7 +273,10 @@ export function WidgetDemo() {
     setFirstName("");
     setLastName("");
     const nextKey = step ? getNextStepKey(step, nextAnswers) : null;
-    if (nextKey) setCurrentKey(nextKey);
+    if (nextKey) {
+      setStepHistory((prev) => [...prev, currentKey]);
+      setCurrentKey(nextKey);
+    }
   };
 
   const hasInput = inputValue.trim().length > 0;
@@ -253,6 +305,11 @@ export function WidgetDemo() {
           <div className="chat-video-placeholder">
             <div className="chat-video-avatar-lg" />
           </div>
+        )}
+        {stepHistory.length > 0 && (
+          <button className="chat-toolbar-btn chat-back-btn" title="Back" onClick={handleBack}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
         )}
         <div className="chat-toolbar-overlay">
           <button
@@ -363,8 +420,8 @@ export function WidgetDemo() {
         {step.type === "transfer_ready" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              <button className="chat-pill" onClick={() => { addUserMessage(t.connectMeNow, step.key); setCurrentKey("connecting"); }}>{t.connectMeNow}</button>
-              <button className="chat-pill" onClick={() => { addUserMessage(t.preferCallback, step.key); setCurrentKey("callback_requested_confirmation"); }}>{t.preferCallback}</button>
+              <button className="chat-pill" onClick={() => { addUserMessage(t.connectMeNow, step.key); setStepHistory((p) => [...p, currentKey]); setCurrentKey("connecting"); }}>{t.connectMeNow}</button>
+              <button className="chat-pill" onClick={() => { addUserMessage(t.preferCallback, step.key); setStepHistory((p) => [...p, currentKey]); setCurrentKey("callback_requested_confirmation"); }}>{t.preferCallback}</button>
             </div>
           </div>
         )}
