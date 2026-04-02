@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateLeadStatusAction } from "./statusAction";
 import { scoreLeadData, getScoreLabel } from "@/lib/scoring/lead-score";
+import { estimateLeadValue, formatCurrency } from "@/lib/scoring/lead-value";
 import { LeadNotes } from "@/components/admin/LeadNotes";
 import { LeadTimeline } from "@/components/admin/LeadTimeline";
 import { SessionReplay } from "@/components/admin/SessionReplay";
@@ -72,6 +73,7 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
       </section>
 
       <LeadScoreCard lead={lead} />
+      <LeadValueCard lead={lead} />
 
       {lead.sentiment_urgency != null && (
         <section className="panel">
@@ -236,6 +238,47 @@ function LeadScoreCard({ lead }: { lead: Record<string, any> }) {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function LeadValueCard({ lead }: { lead: Record<string, any> }) {
+  const value = estimateLeadValue({
+    matterType: lead.matter_type,
+    injuryStatus: lead.injury_status,
+    injuryAreas: lead.injury_areas,
+    medicalTreatment: lead.medical_treatment_status,
+    incidentState: lead.incident_state,
+  });
+
+  return (
+    <section className="panel">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <h2>Estimated Case Value</h2>
+        <span className={`score-badge score-lg score-${value.confidence === "high" ? "warm" : value.confidence === "medium" ? "medium" : "cool"}`}>
+          {value.confidence}
+        </span>
+      </div>
+      <div className="kpi-grid" style={{ marginTop: 0 }}>
+        <div className="kpi-card">
+          <div className="muted text-sm">Low</div>
+          <strong>{formatCurrency(value.lowEstimate)}</strong>
+        </div>
+        <div className="kpi-card" style={{ borderColor: "var(--primary)", background: "var(--primary-weak)" }}>
+          <div className="muted text-sm">Mid Estimate</div>
+          <strong style={{ fontSize: 20, color: "var(--primary)" }}>{formatCurrency(value.midEstimate)}</strong>
+        </div>
+        <div className="kpi-card">
+          <div className="muted text-sm">High</div>
+          <strong>{formatCurrency(value.highEstimate)}</strong>
+        </div>
+      </div>
+      {value.factors.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
+          {value.factors.map((f, i) => <span key={i} className="status-chip" style={{ fontSize: 11 }}>{f}</span>)}
+        </div>
+      )}
     </section>
   );
 }

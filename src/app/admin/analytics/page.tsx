@@ -1,5 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getResponseTimeStats, formatMinutes } from "@/lib/monitoring/response-time";
+import { getROIMetrics } from "@/lib/scoring/roi";
+import { formatCurrency } from "@/lib/scoring/lead-value";
 
 export const dynamic = "force-dynamic";
 
@@ -387,6 +389,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
         </section>
       </div>
 
+      {/* ROI */}
+      <ROISection clientId={searchParams.clientId} days={days} />
+
       {/* Response Time */}
       <ResponseTimeSection clientId={searchParams.clientId} days={days} />
     </div>
@@ -436,6 +441,55 @@ async function ResponseTimeSection({ clientId, days }: { clientId?: string; days
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+async function ROISection({ clientId, days }: { clientId?: string; days: number }) {
+  const roi = await getROIMetrics(clientId, days);
+  if (roi.totalLeads === 0) return null;
+
+  return (
+    <section style={{ marginTop: 32 }}>
+      <h2 style={{ marginBottom: 16 }}>ROI Estimation</h2>
+      <div className="kpi-grid-4" style={{ marginBottom: 16 }}>
+        <div className="kpi-card">
+          <div className="kpi-label">Total Leads</div>
+          <div className="kpi-value">{roi.totalLeads}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Est. Total Value</div>
+          <div className="kpi-value accent">{formatCurrency(roi.totalEstimatedValue)}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Avg Lead Value</div>
+          <div className="kpi-value">{formatCurrency(roi.avgLeadValue)}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Sources</div>
+          <div className="kpi-value">{roi.bySource.length}</div>
+        </div>
+      </div>
+      {roi.bySource.length > 0 && (
+        <div className="admin-card">
+          <h3 style={{ marginBottom: 12 }}>Value by Traffic Source</h3>
+          <table className="table">
+            <thead>
+              <tr><th>Source</th><th>Leads</th><th>Est. Value</th><th>Avg/Lead</th></tr>
+            </thead>
+            <tbody>
+              {roi.bySource.map((s) => (
+                <tr key={s.source}>
+                  <td><strong>{s.source}</strong></td>
+                  <td>{s.leads}</td>
+                  <td style={{ color: "var(--success)", fontWeight: 600 }}>{formatCurrency(s.estimatedValue)}</td>
+                  <td>{formatCurrency(s.avgValue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
