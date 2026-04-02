@@ -5,6 +5,7 @@ import { sendLeadFollowUpSms } from "@/lib/notifications/sms";
 import { scoreLeadData } from "@/lib/scoring/lead-score";
 import { getActiveTest, selectVariant, recordVariantAssignment, recordVariantConversion } from "@/lib/ab-testing/engine";
 import { fireLeadCreatedWebhook } from "@/lib/integrations/webhooks";
+import { sendSlackLeadNotification } from "@/lib/integrations/slack";
 import { autoAssignLead } from "@/lib/routing/lead-assignment";
 import { checkDuplicate, flagDuplicate } from "@/lib/monitoring/duplicates";
 import { classifyAndStoreLead } from "@/lib/ai/classify";
@@ -175,6 +176,17 @@ export async function finalizeLeadFromSession(sessionId: string) {
     incident_state: lead.incident_state,
     lead_score: scoreResult.total,
   }).catch((err) => console.error("[assignment] Failed:", err));
+
+  // Slack notification (fire and forget)
+  sendSlackLeadNotification({
+    name: [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "New Lead",
+    phone: lead.phone_e164,
+    email: lead.email,
+    matterType: lead.matter_type,
+    score: scoreResult.total,
+    scoreTier: scoreResult.tier,
+    leadUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/intakeapp/admin/leads/${lead.id}`,
+  }).catch((err) => console.error("[slack] Failed:", err));
 
   // Fire webhooks (fire and forget)
   fireLeadCreatedWebhook(lead).catch((err) => console.error("[webhook] Failed:", err));

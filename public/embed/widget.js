@@ -153,8 +153,17 @@
       "transform:scale(1)",
       "overflow:hidden",
       "background:" + primaryColor,
-      "-webkit-tap-highlight-color:transparent"
+      "-webkit-tap-highlight-color:transparent",
+      "animation:intakellg-bounce 2s ease-in-out 3s 3"
     ].join(";");
+
+    // Inject bounce animation
+    if (!document.getElementById("intakellg-styles")) {
+      var style = document.createElement("style");
+      style.id = "intakellg-styles";
+      style.textContent = "@keyframes intakellg-bounce{0%,100%{transform:scale(1)}15%{transform:scale(1.15)}30%{transform:scale(1)}}";
+      document.head.appendChild(style);
+    }
 
     if (avatarUrl) {
       var img = document.createElement("img");
@@ -197,6 +206,27 @@
       createOverlay();
       createIframe();
       createLauncher(config);
+
+      // Proactive triggers
+      var triggerDelay = currentScript && currentScript.getAttribute("data-trigger-delay");
+      var triggerScroll = currentScript && currentScript.getAttribute("data-trigger-scroll");
+      var triggerExit = currentScript && currentScript.getAttribute("data-trigger-exit");
+
+      if (triggerDelay) {
+        setTimeout(function () { if (!open) toggleWidget(); }, parseInt(triggerDelay, 10) * 1000);
+      }
+      if (triggerScroll) {
+        var scrollThreshold = parseInt(triggerScroll, 10);
+        window.addEventListener("scroll", function onScroll() {
+          var pct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+          if (pct >= scrollThreshold && !open) { toggleWidget(); window.removeEventListener("scroll", onScroll); }
+        }, { passive: true });
+      }
+      if (triggerExit === "true") {
+        document.addEventListener("mouseleave", function onExit(e) {
+          if (e.clientY <= 0 && !open) { toggleWidget(); document.removeEventListener("mouseleave", onExit); }
+        });
+      }
     })
     .catch(function (err) { console.error("Failed to boot widget", err); });
 })();
