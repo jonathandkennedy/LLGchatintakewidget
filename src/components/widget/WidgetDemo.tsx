@@ -157,18 +157,31 @@ export function WidgetDemo() {
 
   function handleUndo(msg: ChatMessage) {
     if (!msg.stepKey) return;
-    // Remove this message and all after it, revert to the step
     const idx = messages.findIndex((m) => m.id === msg.id);
     if (idx < 0) return;
+
+    // Collect all bot steps that will be reverted
+    const revertedMessages = messages.slice(idx);
+    const revertedBotSteps = revertedMessages.filter((m) => m.role === "bot").map((m) => m.stepKey).filter(Boolean);
+
+    // Remove messages from this point forward
     setMessages((prev) => prev.slice(0, idx));
-    // Remove answer
-    if (step?.fieldKey) {
-      setAnswers((prev) => {
-        const next = { ...prev };
-        delete next[step.fieldKey!];
-        return next;
-      });
-    }
+
+    // Remove answers for all reverted steps
+    setAnswers((prev) => {
+      const next = { ...prev };
+      for (const stepKey of revertedBotSteps) {
+        const flowStep = DEFAULT_FLOW.steps.find((s) => s.key === stepKey);
+        if (flowStep?.fieldKey) delete next[flowStep.fieldKey];
+      }
+      // Also handle name step special fields
+      if (revertedBotSteps.includes("full_name")) {
+        delete next.first_name;
+        delete next.last_name;
+      }
+      return next;
+    });
+
     setCurrentKey(msg.stepKey);
   }
 

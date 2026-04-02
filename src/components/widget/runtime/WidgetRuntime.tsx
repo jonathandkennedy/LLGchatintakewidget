@@ -125,8 +125,47 @@ export function WidgetRuntime({ clientSlug }: Props) {
     setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: t.timeAgo, stepKey: currentKey }]);
   }
 
-  function addUserMessage(text: string) {
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: t.timeAgo }]);
+  function addUserMessage(text: string, stepKey?: string) {
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: t.timeAgo, stepKey: stepKey ?? currentKey }]);
+  }
+
+  async function handleUndo(msg: ChatMessage) {
+    if (!msg.stepKey || !sessionId) return;
+    const idx = messages.findIndex((m) => m.id === msg.id);
+    if (idx < 0) return;
+
+    setSubmitting(true);
+    try {
+      // Revert server-side answers from this step forward
+      const response = await fetch("/api/widget/session/revert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, toStepKey: msg.stepKey }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error ?? "Failed to revert");
+
+      // Revert local state: remove messages from this point forward
+      setMessages((prev) => prev.slice(0, idx));
+
+      // Remove local answers for reverted fields
+      const revertedMessages = messages.slice(idx);
+      const revertedBotSteps = revertedMessages.filter((m) => m.role === "bot").map((m) => m.stepKey).filter(Boolean);
+      setAnswers((prev) => {
+        const next = { ...prev };
+        for (const stepKey of revertedBotSteps) {
+          const flowStep = config?.flow.steps.find((s) => s.key === stepKey);
+          if (flowStep?.fieldKey) delete next[flowStep.fieldKey];
+        }
+        return next;
+      });
+
+      setCurrentKey(msg.stepKey);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to undo");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function ensureSession() {
@@ -330,6 +369,13 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-msg ${msg.role === "bot" ? "chat-msg-bot" : "chat-msg-user"}`}>
+            {msg.role === "user" && msg.stepKey && (
+              <div className="chat-user-actions">
+                <button className="chat-action-btn" title="Undo" disabled={submitting} onClick={() => handleUndo(msg)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+                </button>
+              </div>
+            )}
             <div className={`chat-bubble ${msg.role === "bot" ? "chat-bubble-bot" : "chat-bubble-user"}`}>
               {msg.text}
             </div>
