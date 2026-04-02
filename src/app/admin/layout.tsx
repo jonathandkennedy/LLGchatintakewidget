@@ -1,15 +1,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { NotificationBell } from "@/components/admin/NotificationBell";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard", icon: "📊" },
-  { href: "/admin/leads", label: "Leads", icon: "👤" },
-  { href: "/admin/clients", label: "Clients", icon: "🏢" },
-  { href: "/admin/analytics", label: "Analytics", icon: "📈" },
-  { href: "/admin/flow-editor", label: "Flow Editor", icon: "🔀" },
-  { href: "/admin/routing", label: "Routing", icon: "📞" },
-  { href: "/admin/branding", label: "Branding", icon: "🎨" },
-  { href: "/admin/install", label: "Install", icon: "📋" },
+  { href: "/admin", label: "Dashboard", icon: "D" },
+  { href: "/admin/leads", label: "Leads", icon: "L" },
+  { href: "/admin/clients", label: "Clients", icon: "C" },
+  { href: "/admin/analytics", label: "Analytics", icon: "A" },
+  { href: "/admin/flow-editor", label: "Flow Editor", icon: "F" },
+  { href: "/admin/routing", label: "Routing", icon: "R" },
+  { href: "/admin/branding", label: "Branding", icon: "B" },
+  { href: "/admin/install", label: "Install", icon: "I" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -29,12 +30,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="admin-nav-footer">
           <Link href="/widget-demo" className="admin-nav-item" target="_blank">
-            <span className="admin-nav-icon">🔍</span>
+            <span className="admin-nav-icon">W</span>
             Widget Preview
           </Link>
         </div>
       </aside>
-      <main className="admin-main">{children}</main>
+      <main className="admin-main">
+        <div className="admin-topbar">
+          <NotificationBell />
+        </div>
+        {children}
+      </main>
     </div>
   );
 }
