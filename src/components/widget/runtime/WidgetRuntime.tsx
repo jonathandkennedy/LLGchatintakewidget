@@ -18,7 +18,7 @@ type CompleteResponse = { ok: boolean; leadId: string; status: string };
 
 type ConnectResponse = { ok: boolean; status: string; reason?: string };
 
-const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
+import { US_STATES } from "@/lib/constants/us-states";
 
 export function WidgetRuntime({ clientSlug }: Props) {
   const [config, setConfig] = useState<WidgetPublicConfig | null>(null);
@@ -250,7 +250,8 @@ export function WidgetRuntime({ clientSlug }: Props) {
           <div className="stack">
             <select className="text-input" value={inputValue} onChange={(event) => setInputValue(event.target.value)}>
               <option value="">Select a state</option>
-              {STATE_OPTIONS.map((state) => <option key={state} value={state}>{state}</option>)}
+              {US_STATES.map((state) => <option key={state.value} value={state.label}>{state.label}</option>)}
+            </select>
             </select>
             <button className="primary-button" disabled={submitting} onClick={handleContinue}>Continue</button>
           </div>

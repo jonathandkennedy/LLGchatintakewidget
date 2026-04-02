@@ -2,9 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { DEFAULT_FLOW } from "@/lib/widget/default-flow";
+import { US_STATES } from "@/lib/constants/us-states";
 import type { WidgetStep } from "@/types/widget";
-
-const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
 function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): string | null {
   if (step.branches?.length) {
@@ -125,8 +124,8 @@ export function WidgetDemo() {
           <div className="stack">
             <select className="text-input" value={textValue} onChange={(event) => setTextValue(event.target.value)}>
               <option value="">Select a state</option>
-              {STATE_OPTIONS.map((state) => (
-                <option key={state} value={state}>{state}</option>
+              {US_STATES.map((state) => (
+                <option key={state.value} value={state.label}>{state.label}</option>
               ))}
             </select>
             <button className="primary-button" onClick={() => goNext(textValue)}>

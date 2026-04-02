@@ -22,12 +22,12 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
 
   if (!bundle) {
     return (
-      <main className="page-shell">
-        <section className="panel">
+      <div className="admin-content">
+        <section className="admin-card">
           <h1>Lead not found</h1>
-          <Link href="/admin/leads">Back to leads</Link>
+          <Link href="/admin/leads">← Back to leads</Link>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -35,83 +35,101 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
   const name = [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "Unknown lead";
 
   return (
-    <main className="page-shell detail-grid">
-      <section className="panel">
-        <div className="eyebrow">Lead detail</div>
-        <h1>{name}</h1>
-        <p className="muted">{lead.matter_type ?? "Unknown matter type"} · {lead.phone_e164 ?? "No phone"}</p>
-
-        <form action={updateLeadStatusAction} className="stack" style={{ marginTop: 16 }}>
-          <input type="hidden" name="leadId" value={lead.id} />
-          <label className="muted">Lead status</label>
-          <select className="text-input" name="status" defaultValue={lead.status}>
-            <option value="started">started</option>
-            <option value="intake_completed">intake_completed</option>
-            <option value="transfer_attempted">transfer_attempted</option>
-            <option value="call_connected">call_connected</option>
-            <option value="callback_pending">callback_pending</option>
-            <option value="closed_contacted">closed_contacted</option>
-            <option value="closed_uncontacted">closed_uncontacted</option>
-          </select>
-          <button className="primary-button" type="submit">Update status</button>
-        </form>
-
-        <div className="kpi-grid">
-          <div className="kpi-card"><div className="muted">Created</div><strong>{new Date(lead.created_at).toLocaleString()}</strong></div>
-          <div className="kpi-card"><div className="muted">Current status</div><strong>{lead.status}</strong></div>
-          <div className="kpi-card"><div className="muted">Email</div><strong>{lead.email ?? "—"}</strong></div>
+    <div className="admin-content detail-grid">
+      <div className="admin-page-header">
+        <div>
+          <Link href="/admin/leads" className="admin-link">← Back to leads</Link>
+          <h1 style={{ marginTop: 8 }}>{name}</h1>
+          <p className="muted">{lead.matter_type ?? "Unknown matter type"} · {lead.phone_e164 ?? "No phone"} · {lead.email ?? "No email"}</p>
         </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <section className="admin-card">
+          <h2>Lead Info</h2>
+          <div className="kpi-grid" style={{ marginTop: 12 }}>
+            <div className="kpi-card"><div className="kpi-label">Created</div><strong>{new Date(lead.created_at).toLocaleString()}</strong></div>
+            <div className="kpi-card"><div className="kpi-label">Status</div><span className="status-chip">{lead.status}</span></div>
+            <div className="kpi-card"><div className="kpi-label">Location</div><strong>{[lead.incident_city, lead.incident_state].filter(Boolean).join(", ") || "—"}</strong></div>
+          </div>
+        </section>
+
+        <section className="admin-card">
+          <h2>Update Status</h2>
+          <form action={updateLeadStatusAction} className="admin-form">
+            <input type="hidden" name="leadId" value={lead.id} />
+            <select className="text-input" name="status" defaultValue={lead.status}>
+              <option value="opened">opened</option>
+              <option value="started">started</option>
+              <option value="in_progress">in_progress</option>
+              <option value="intake_completed">intake_completed</option>
+              <option value="transfer_attempted">transfer_attempted</option>
+              <option value="call_connected">call_connected</option>
+              <option value="callback_pending">callback_pending</option>
+              <option value="closed_contacted">closed_contacted</option>
+              <option value="closed_uncontacted">closed_uncontacted</option>
+            </select>
+            <button className="primary-button" type="submit">Update Status</button>
+          </form>
+        </section>
+      </div>
+
+      <section className="admin-card">
+        <h2>Intake Answers</h2>
+        {answers.length === 0 ? <p className="muted">No answers recorded.</p> : (
+          <table className="table">
+            <thead><tr><th>Field</th><th>Value</th></tr></thead>
+            <tbody>
+              {answers.map((answer) => (
+                <tr key={answer.id}>
+                  <td><strong>{answer.field_key}</strong></td>
+                  <td>{answer.value_text ?? JSON.stringify(answer.value_json)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
-      <section className="panel">
-        <h2>Intake answers</h2>
-        <table className="table">
-          <thead><tr><th>Field</th><th>Value</th></tr></thead>
-          <tbody>
-            {answers.map((answer) => (
-              <tr key={answer.id}>
-                <td>{answer.field_key}</td>
-                <td>{answer.value_text ?? JSON.stringify(answer.value_json)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="admin-card">
+        <h2>Call Attempts</h2>
+        {calls.length === 0 ? <p className="muted">No call attempts.</p> : (
+          <table className="table">
+            <thead><tr><th>Status</th><th>Destination</th><th>Started</th><th>Connected</th><th>Failure Reason</th></tr></thead>
+            <tbody>
+              {calls.map((call) => (
+                <tr key={call.id}>
+                  <td><span className="status-chip">{call.status}</span></td>
+                  <td>{call.destination_number_e164}</td>
+                  <td>{new Date(call.started_at).toLocaleString()}</td>
+                  <td>{call.connected_at ? new Date(call.connected_at).toLocaleString() : "—"}</td>
+                  <td>{call.failure_reason ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
-      <section className="panel">
-        <h2>Call attempts</h2>
-        <table className="table">
-          <thead><tr><th>Status</th><th>Destination</th><th>Started</th><th>Reason</th></tr></thead>
-          <tbody>
-            {calls.map((call) => (
-              <tr key={call.id}>
-                <td>{call.status}</td>
-                <td>{call.destination_number_e164}</td>
-                <td>{new Date(call.started_at).toLocaleString()}</td>
-                <td>{call.failure_reason ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="panel">
-        <h2>SMS messages</h2>
-        <table className="table">
-          <thead><tr><th>Direction</th><th>Status</th><th>To</th><th>Message</th></tr></thead>
-          <tbody>
-            {sms.map((message) => (
-              <tr key={message.id}>
-                <td>{message.direction}</td>
-                <td>{message.status}</td>
-                <td>{message.to_number_e164}</td>
-                <td>{message.message_body}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{ marginTop: 16 }}><Link href="/admin/leads">Back to leads</Link></div>
-      </section>
-    </main>
+      {sms.length > 0 && (
+        <section className="admin-card">
+          <h2>SMS Messages</h2>
+          <table className="table">
+            <thead><tr><th>Direction</th><th>Status</th><th>To</th><th>Message</th><th>Sent</th></tr></thead>
+            <tbody>
+              {sms.map((message) => (
+                <tr key={message.id}>
+                  <td>{message.direction}</td>
+                  <td><span className="status-chip">{message.status}</span></td>
+                  <td>{message.to_number_e164}</td>
+                  <td style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis" }}>{message.message_body}</td>
+                  <td>{new Date(message.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+    </div>
   );
 }
