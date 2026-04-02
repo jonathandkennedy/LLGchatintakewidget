@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetPublicConfig, WidgetStep } from "@/types/widget";
+import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlaceholder, type Lang } from "@/lib/widget/i18n";
 
 type Props = { clientSlug: string };
 
@@ -40,7 +41,10 @@ export function WidgetRuntime({ clientSlug }: Props) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [lang, setLang] = useState<Lang>("en");
   const threadRef = useRef<HTMLDivElement>(null);
+
+  const t = translations[lang];
 
   useEffect(() => {
     async function boot() {
@@ -64,11 +68,13 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   useEffect(() => {
     if (!step || loading) return;
+    const title = getStepTitle(lang, step.key) ?? step.title;
+    const desc = getStepDescription(lang, step.key) ?? step.description;
     const welcomeText = step.type === "welcome" && config
-      ? config.branding.welcomeHeadline + (config.branding.welcomeBody ? "\n" + config.branding.welcomeBody : "")
-      : step.title + (step.description ? "\n" + step.description : "");
+      ? (getStepTitle(lang, "welcome") ?? config.branding.welcomeHeadline) + "\n" + (getStepDescription(lang, "welcome") ?? config.branding.welcomeBody ?? "")
+      : title + (desc ? "\n" + desc : "");
     addBotMessage(welcomeText);
-  }, [currentKey, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentKey, loading, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setInputValue("");
@@ -186,7 +192,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   async function handleWelcome() {
     setSubmitting(true);
-    addUserMessage("Start intake");
+    addUserMessage(t.startIntake);
     try {
       const sid = await ensureSession();
       setSessionId(sid);
@@ -202,7 +208,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
     if (!step) return;
     setSubmitting(true);
     setError("");
-    addUserMessage("Connect me now");
+    addUserMessage(t.connectMeNow);
     try {
       const sid = await ensureSession();
       const completeRes = await fetch("/api/widget/session/complete", {
@@ -236,14 +242,14 @@ export function WidgetRuntime({ clientSlug }: Props) {
         <div className="chat-thread">
           <div className="loading-skeleton">
             <div className="loading-spinner" />
-            <div className="loading-text">Loading...</div>
+            <div className="loading-text">{t.loading}</div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!config || !step) return <div className="widget-card"><div className="chat-thread">Widget unavailable.</div></div>;
+  if (!config || !step) return <div className="widget-card"><div className="chat-thread">{t.widgetUnavailable}</div></div>;
 
   const hasInput = inputValue.trim().length > 0;
   const hasName = firstName.trim().length > 0 && lastName.trim().length > 0;
@@ -251,9 +257,21 @@ export function WidgetRuntime({ clientSlug }: Props) {
   return (
     <div className="widget-card widget-runtime">
       {/* Toolbar */}
-      <div className="widget-toolbar">
-        <button className="widget-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
-        <button className="widget-toolbar-btn" title="Close" onClick={() => window.parent?.postMessage?.("widget-close", "*")}>&times;</button>
+      <div className="chat-video-header">
+        <div className="chat-video-placeholder">
+          {config.branding.avatarUrl ? (
+            <img src={config.branding.avatarUrl} alt="" className="chat-video-avatar-lg" style={{ objectFit: "cover" }} />
+          ) : (
+            <div className="chat-video-avatar-lg" />
+          )}
+        </div>
+        <div className="chat-toolbar-overlay">
+          <button className="chat-toolbar-btn chat-lang-btn" onClick={() => setLang(lang === "en" ? "es" : "en")}>
+            {lang === "en" ? t.espanol : t.english}
+          </button>
+          <button className="chat-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
+          <button className="chat-toolbar-btn" title="Close" onClick={() => window.parent?.postMessage?.("widget-close", "*")}>&times;</button>
+        </div>
       </div>
 
       {/* Chat thread */}
@@ -279,26 +297,29 @@ export function WidgetRuntime({ clientSlug }: Props) {
         {/* Privacy notice after welcome */}
         {messages.length === 1 && config.branding.privacyUrl && (
           <div className="chat-privacy">
-            This transcript will be recorded by {config.branding.widgetTitle} and its affiliates. We respect your privacy.{" "}
-            <a href={config.branding.privacyUrl} target="_blank" rel="noreferrer">Privacy Policy</a>
+            {t.privacyNotice}{" "}
+            <a href={config.branding.privacyUrl} target="_blank" rel="noreferrer">{t.privacyPolicy}</a>
           </div>
         )}
 
         {/* Interactive options */}
         {step.type === "welcome" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
-            <button className="chat-pill" disabled={submitting} onClick={handleWelcome}>Start intake</button>
+            <button className="chat-pill" disabled={submitting} onClick={handleWelcome}>{t.startIntake}</button>
           </div>
         )}
 
         {(step.type === "single_select" || step.type === "date_range") && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              {step.options?.map((opt) => (
-                <button key={opt.key} className="chat-pill" disabled={submitting} onClick={() => handleOptionSelect(opt.key, opt.label)}>
-                  {opt.label}
-                </button>
-              ))}
+              {step.options?.map((opt) => {
+                const label = getOptionLabel(lang, opt.key) ?? opt.label;
+                return (
+                  <button key={opt.key} className="chat-pill" disabled={submitting} onClick={() => handleOptionSelect(opt.key, label)}>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -306,19 +327,22 @@ export function WidgetRuntime({ clientSlug }: Props) {
         {step.type === "multi_select" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              {step.options?.map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`chat-pill ${selectedMulti.includes(opt.key) ? "selected" : ""}`}
-                  disabled={submitting}
-                  onClick={() => setSelectedMulti((c) => c.includes(opt.key) ? c.filter((k) => k !== opt.key) : [...c, opt.key])}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {step.options?.map((opt) => {
+                const label = getOptionLabel(lang, opt.key) ?? opt.label;
+                return (
+                  <button
+                    key={opt.key}
+                    className={`chat-pill ${selectedMulti.includes(opt.key) ? "selected" : ""}`}
+                    disabled={submitting}
+                    onClick={() => setSelectedMulti((c) => c.includes(opt.key) ? c.filter((k) => k !== opt.key) : [...c, opt.key])}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             {selectedMulti.length > 0 && (
-              <button className="chat-pill selected" style={{ marginTop: 8 }} disabled={submitting} onClick={handleMultiSubmit}>Continue</button>
+              <button className="chat-pill selected" style={{ marginTop: 8 }} disabled={submitting} onClick={handleMultiSubmit}>{t.continue_}</button>
             )}
           </div>
         )}
@@ -338,21 +362,21 @@ export function WidgetRuntime({ clientSlug }: Props) {
         {step.type === "transfer_ready" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              <button className="chat-pill" disabled={submitting} onClick={handleTransfer}>Connect me now</button>
+              <button className="chat-pill" disabled={submitting} onClick={handleTransfer}>{t.connectMeNow}</button>
             </div>
           </div>
         )}
 
         {step.type === "connecting" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
-            <div className="status-pill">Connecting your call...</div>
+            <div className="status-pill">{t.connecting}</div>
           </div>
         )}
 
         {(step.type === "connected" || step.type === "fallback" || step.type === "callback_confirmation") && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
             <div className="answer-preview">Lead: {leadId ?? "pending"}{"\n"}Status: {step.type}</div>
-            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>Restart</button>
+            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>{t.restart}</button>
           </div>
         )}
       </div>
@@ -361,8 +385,8 @@ export function WidgetRuntime({ clientSlug }: Props) {
       {step.type === "name" && (
         <div className="chat-input-bar">
           <div className="chat-name-row">
-            <input className="chat-name-input" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            <input className="chat-name-input" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <input className="chat-name-input" placeholder={t.firstName} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <input className="chat-name-input" placeholder={t.lastName} value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </div>
           <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
             <button className={`chat-submit-btn ${hasName ? "active" : ""}`} disabled={!hasName || submitting} onClick={handleNameSubmit}>&#10003;</button>
@@ -376,7 +400,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
             <input
               className="chat-input-field"
               type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"}
-              placeholder={step.placeholder ?? "Type here..."}
+              placeholder={getPlaceholder(lang, step.key) ?? step.placeholder ?? t.typeHere}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
@@ -391,7 +415,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
           <div className="chat-input-row">
             <textarea
               className="chat-input-field"
-              placeholder={step.placeholder ?? "Type here..."}
+              placeholder={getPlaceholder(lang, step.key) ?? step.placeholder ?? t.typeHere}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               rows={2}
@@ -407,9 +431,9 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
       {/* Footer */}
       <div className="widget-footer">
-        {config.branding.privacyUrl ? <a href={config.branding.privacyUrl} target="_blank" rel="noreferrer">Privacy</a> : null}
-        {config.branding.termsUrl ? <a href={config.branding.termsUrl} target="_blank" rel="noreferrer">Terms</a> : null}
-        <span style={{ marginLeft: "auto" }}>Powered by <strong>IntakeLLG</strong></span>
+        {config.branding.privacyUrl ? <a href={config.branding.privacyUrl} target="_blank" rel="noreferrer">{t.privacy}</a> : null}
+        {config.branding.termsUrl ? <a href={config.branding.termsUrl} target="_blank" rel="noreferrer">{t.terms}</a> : null}
+        <span style={{ marginLeft: "auto" }}>{t.poweredBy} <strong>IntakeLLG</strong></span>
       </div>
     </div>
   );

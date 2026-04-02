@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { DEFAULT_FLOW } from "@/lib/widget/default-flow";
+import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlaceholder, type Lang } from "@/lib/widget/i18n";
 import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
@@ -78,8 +79,10 @@ export function WidgetDemo() {
   const [lastName, setLastName] = useState("");
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
   const [inputMode, setInputMode] = useState<"text" | "voice" | "video">("text");
+  const [lang, setLang] = useState<Lang>("en");
   const threadRef = useRef<HTMLDivElement>(null);
 
+  const t = translations[lang];
   const step = useMemo(() => DEFAULT_FLOW.steps.find((item) => item.key === currentKey), [currentKey]);
 
   const scrollToBottom = useCallback(() => {
@@ -94,12 +97,14 @@ export function WidgetDemo() {
 
   useEffect(() => {
     if (!step) return;
-    const text = step.title + (step.description ? "\n" + step.description : "");
-    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: timeAgo(), stepKey: step.key }]);
-  }, [currentKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    const title = getStepTitle(lang, step.key) ?? step.title;
+    const desc = getStepDescription(lang, step.key) ?? step.description;
+    const text = title + (desc ? "\n" + desc : "");
+    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: t.timeAgo, stepKey: step.key }]);
+  }, [currentKey, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function addUserMessage(text: string, stepKey?: string) {
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: timeAgo(), stepKey }]);
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: t.timeAgo, stepKey }]);
   }
 
   function handleUndo(msg: ChatMessage) {
@@ -176,6 +181,12 @@ export function WidgetDemo() {
           <div className="chat-video-avatar-lg" />
         </div>
         <div className="chat-toolbar-overlay">
+          <button
+            className="chat-toolbar-btn chat-lang-btn"
+            onClick={() => setLang(lang === "en" ? "es" : "en")}
+          >
+            {lang === "en" ? t.espanol : t.english}
+          </button>
           <button className="chat-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
           <button className="chat-toolbar-btn" title="Close">&times;</button>
         </div>
@@ -208,24 +219,25 @@ export function WidgetDemo() {
         {/* Privacy notice after first answer */}
         {messages.filter((m) => m.role === "user").length === 1 && (
           <div className="chat-privacy">
-            This transcript will be recorded. We respect your privacy.{" "}
-            <a href="#" onClick={(e) => e.preventDefault()}>Privacy Policy</a>
+            {t.privacyNotice}{" "}
+            <a href="#" onClick={(e) => e.preventDefault()}>{t.privacyPolicy}</a>
           </div>
         )}
 
         {/* Interactive options */}
         {step.type === "welcome" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
-            <button className="chat-pill" onClick={() => goNext(undefined, "Start intake")}>Start intake</button>
+            <button className="chat-pill" onClick={() => goNext(undefined, t.startIntake)}>{t.startIntake}</button>
           </div>
         )}
 
         {(step.type === "single_select" || step.type === "date_range") && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              {step.options?.map((opt) => (
-                <button key={opt.key} className="chat-pill" onClick={() => goNext(opt.key, opt.label)}>{opt.label}</button>
-              ))}
+              {step.options?.map((opt) => {
+                const label = getOptionLabel(lang, opt.key) ?? opt.label;
+                return <button key={opt.key} className="chat-pill" onClick={() => goNext(opt.key, label)}>{label}</button>;
+              })}
             </div>
           </div>
         )}
@@ -233,16 +245,19 @@ export function WidgetDemo() {
         {step.type === "multi_select" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              {step.options?.map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`chat-pill ${selectedMulti.includes(opt.key) ? "selected" : ""}`}
-                  onClick={() => setSelectedMulti((c) => c.includes(opt.key) ? c.filter((k) => k !== opt.key) : [...c, opt.key])}
-                >{opt.label}</button>
-              ))}
+              {step.options?.map((opt) => {
+                const label = getOptionLabel(lang, opt.key) ?? opt.label;
+                return (
+                  <button
+                    key={opt.key}
+                    className={`chat-pill ${selectedMulti.includes(opt.key) ? "selected" : ""}`}
+                    onClick={() => setSelectedMulti((c) => c.includes(opt.key) ? c.filter((k) => k !== opt.key) : [...c, opt.key])}
+                  >{label}</button>
+                );
+              })}
             </div>
             {selectedMulti.length > 0 && (
-              <button className="chat-pill selected" style={{ marginTop: 8 }} onClick={() => goNext(selectedMulti, selectedMulti.join(", "))}>Continue</button>
+              <button className="chat-pill selected" style={{ marginTop: 8 }} onClick={() => goNext(selectedMulti, selectedMulti.join(", "))}>{t.continue_}</button>
             )}
           </div>
         )}
@@ -260,18 +275,18 @@ export function WidgetDemo() {
         {step.type === "transfer_ready" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              <button className="chat-pill" onClick={() => { addUserMessage("Connect me now", step.key); setCurrentKey("connecting"); }}>Connect me now</button>
-              <button className="chat-pill" onClick={() => { addUserMessage("Prefer a callback", step.key); setCurrentKey("callback_requested_confirmation"); }}>Prefer a callback</button>
+              <button className="chat-pill" onClick={() => { addUserMessage(t.connectMeNow, step.key); setCurrentKey("connecting"); }}>{t.connectMeNow}</button>
+              <button className="chat-pill" onClick={() => { addUserMessage(t.preferCallback, step.key); setCurrentKey("callback_requested_confirmation"); }}>{t.preferCallback}</button>
             </div>
           </div>
         )}
 
         {step.type === "connecting" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
-            <div className="status-pill">Connecting...</div>
+            <div className="status-pill">{t.connecting}</div>
             <div className="chat-options" style={{ marginTop: 8 }}>
-              <button className="chat-pill" onClick={() => setCurrentKey("connected")}>Simulate connected</button>
-              <button className="chat-pill" onClick={() => setCurrentKey("transfer_fallback")}>Simulate fallback</button>
+              <button className="chat-pill" onClick={() => setCurrentKey("connected")}>{t.simulateConnected}</button>
+              <button className="chat-pill" onClick={() => setCurrentKey("transfer_fallback")}>{t.simulateFallback}</button>
             </div>
           </div>
         )}
@@ -279,7 +294,7 @@ export function WidgetDemo() {
         {(step.type === "connected" || step.type === "fallback" || step.type === "callback_confirmation") && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
             <pre className="answer-preview">{JSON.stringify(answers, null, 2)}</pre>
-            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>Restart demo</button>
+            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>{t.restartDemo}</button>
           </div>
         )}
       </div>
@@ -288,8 +303,8 @@ export function WidgetDemo() {
       {step.type === "name" && (
         <div className="chat-input-bar">
           <div className="chat-name-row">
-            <input className="chat-name-input" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()} />
-            <input className="chat-name-input" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()} />
+            <input className="chat-name-input" placeholder={t.firstName} value={firstName} onChange={(e) => setFirstName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()} />
+            <input className="chat-name-input" placeholder={t.lastName} value={lastName} onChange={(e) => setLastName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()} />
           </div>
           <button className={`chat-submit-bar-btn ${hasName ? "active" : ""}`} disabled={!hasName} onClick={handleNameSubmit}>
             <CheckIcon />
@@ -303,7 +318,7 @@ export function WidgetDemo() {
             <input
               className="chat-input-field"
               type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"}
-              placeholder={step.placeholder ?? "Type here..."}
+              placeholder={getPlaceholder(lang, step.key) ?? step.placeholder ?? t.typeHere}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
@@ -334,7 +349,7 @@ export function WidgetDemo() {
           <div className="chat-input-underline">
             <textarea
               className="chat-input-field"
-              placeholder={step.placeholder ?? "Type here..."}
+              placeholder={getPlaceholder(lang, step.key) ?? step.placeholder ?? t.typeHere}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               rows={2}
@@ -361,7 +376,7 @@ export function WidgetDemo() {
 
       {/* Footer */}
       <div className="widget-footer">
-        <span>Powered by <strong>IntakeLLG</strong></span>
+        <span>{t.poweredBy} <strong>IntakeLLG</strong></span>
       </div>
     </div>
   );
