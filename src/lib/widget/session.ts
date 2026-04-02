@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeUsPhone } from "@/lib/utils/phone";
+import { sendLeadNotificationEmail } from "@/lib/notifications/email";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -97,6 +98,25 @@ export async function finalizeLeadFromSession(sessionId: string) {
     .eq("id", sessionId);
 
   if (sessionUpdateError) throw sessionUpdateError;
+
+  // Send email notification (fire and forget - don't block the response)
+  sendLeadNotificationEmail({
+    leadId: lead.id,
+    firstName: lead.first_name,
+    lastName: lead.last_name,
+    phone: lead.phone_e164,
+    email: lead.email,
+    matterType: lead.matter_type,
+    incidentSummary: lead.incident_summary,
+    injuryStatus: lead.injury_status,
+    injuryAreas: lead.injury_areas,
+    medicalTreatment: lead.medical_treatment_status,
+    state: lead.incident_state,
+    city: lead.incident_city,
+    dateRange: lead.incident_date_range,
+    additionalNotes: lead.additional_notes,
+    createdAt: lead.created_at,
+  }).catch((err) => console.error("[email] Failed to send lead notification:", err));
 
   return lead;
 }
