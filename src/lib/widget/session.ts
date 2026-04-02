@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeUsPhone } from "@/lib/utils/phone";
 import { sendLeadNotificationEmail } from "@/lib/notifications/email";
+import { scoreLeadData } from "@/lib/scoring/lead-score";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -65,6 +66,18 @@ export async function finalizeLeadFromSession(sessionId: string) {
   const lastName = String(map.get("last_name") ?? "").trim();
   const normalizedPhone = normalizeUsPhone(String(map.get("phone") ?? ""));
 
+  // Compute lead score
+  const scoreResult = scoreLeadData({
+    matter_type: map.get("matter_type") as string | null,
+    injury_status: map.get("injury_status") as string | null,
+    injury_areas: map.get("injury_areas") as string[] | null,
+    medical_treatment_status: map.get("medical_treatment_status") as string | null,
+    incident_state: map.get("incident_state") as string | null,
+    incident_date_range: map.get("incident_date_range") as string | null,
+    phone_e164: normalizedPhone,
+    email: map.get("email") as string | null,
+  });
+
   const payload = {
     session_id: sessionId,
     client_id: session.client_id,
@@ -82,6 +95,8 @@ export async function finalizeLeadFromSession(sessionId: string) {
     phone_e164: normalizedPhone,
     email: map.get("email") ?? null,
     additional_notes: map.get("additional_notes") ?? null,
+    lead_score: scoreResult.total,
+    lead_score_tier: scoreResult.tier,
   };
 
   const { data: lead, error: leadError } = await supabaseAdmin

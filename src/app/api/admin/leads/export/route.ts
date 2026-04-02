@@ -17,6 +17,8 @@ const CSV_COLUMNS = [
   { key: "medical_treatment_status", label: "Medical Treatment" },
   { key: "incident_date_range", label: "Incident Date" },
   { key: "additional_notes", label: "Notes" },
+  { key: "lead_score", label: "Score" },
+  { key: "lead_score_tier", label: "Score Tier" },
   { key: "created_at", label: "Created" },
 ] as const;
 

@@ -11,7 +11,7 @@ type SearchParams = {
 async function getLeads(searchParams: SearchParams) {
   let builder = supabaseAdmin
     .from("leads")
-    .select("id, created_at, status, matter_type, first_name, last_name, phone_e164, incident_state, incident_city")
+    .select("id, created_at, status, matter_type, first_name, last_name, phone_e164, incident_state, incident_city, lead_score, lead_score_tier")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -63,6 +63,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: S
           <thead>
             <tr>
               <th>Name</th>
+              <th>Score</th>
               <th>Matter type</th>
               <th>Status</th>
               <th>Location</th>
@@ -77,6 +78,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: S
               return (
                 <tr key={lead.id}>
                   <td><Link href={`/admin/leads/${lead.id}`}>{name}</Link></td>
+                  <td>{lead.lead_score != null ? <span className={`score-badge score-${lead.lead_score_tier ?? "cold"}`}>{lead.lead_score}</span> : "\u2014"}</td>
                   <td>{lead.matter_type ?? "\u2014"}</td>
                   <td><span className="status-chip">{lead.status}</span></td>
                   <td>{location}</td>

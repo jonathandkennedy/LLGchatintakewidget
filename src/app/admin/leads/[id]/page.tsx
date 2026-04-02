@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateLeadStatusAction } from "./statusAction";
+import { scoreLeadData, getScoreLabel } from "@/lib/scoring/lead-score";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,8 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
         </div>
       </section>
 
+      <LeadScoreCard lead={lead} />
+
       <section className="panel">
         <h2>Intake answers</h2>
         <table className="table" style={{ marginTop: 16 }}>
@@ -113,5 +116,45 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
         <div style={{ marginTop: 20 }}><Link href="/admin/leads">Back to leads</Link></div>
       </section>
     </main>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function LeadScoreCard({ lead }: { lead: Record<string, any> }) {
+  const score = scoreLeadData({
+    matter_type: lead.matter_type,
+    injury_status: lead.injury_status,
+    injury_areas: lead.injury_areas,
+    medical_treatment_status: lead.medical_treatment_status,
+    incident_state: lead.incident_state,
+    incident_date_range: lead.incident_date_range,
+    phone_e164: lead.phone_e164,
+    email: lead.email,
+  });
+
+  return (
+    <section className="panel">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <h2>Lead Score</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span className={`score-badge score-lg score-${score.tier}`}>{score.total}</span>
+          <span className={`score-tier-label score-${score.tier}`}>{getScoreLabel(score.tier)}</span>
+        </div>
+      </div>
+      <div className="score-factors">
+        {score.factors.map((f) => (
+          <div key={f.label} className="score-factor-row">
+            <span className="score-factor-label">{f.label}</span>
+            <div className="score-factor-bar-track">
+              <div
+                className={`score-factor-bar-fill score-${score.tier}`}
+                style={{ width: `${f.maxPoints > 0 ? (f.points / f.maxPoints) * 100 : 0}%` }}
+              />
+            </div>
+            <span className="score-factor-value">{f.points}/{f.maxPoints}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
