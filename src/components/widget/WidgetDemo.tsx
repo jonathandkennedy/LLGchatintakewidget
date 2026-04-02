@@ -97,6 +97,10 @@ export function WidgetDemo() {
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
   const [inputMode, setInputMode] = useState<"text" | "voice" | "video">("text");
   const [lang, setLang] = useState<Lang>("en");
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return false;
+  });
   const [restored, setRestored] = useState(false);
   const [typing, setTyping] = useState(false);
   const [stepHistory, setStepHistory] = useState<string[]>([]);
@@ -307,7 +311,7 @@ export function WidgetDemo() {
   const showInputBar = showTextInput || showTextarea || step.type === "name";
 
   return (
-    <div className="widget-card">
+    <div className={`widget-card ${darkMode ? "dark" : ""}`}>
       {/* Video/Image Header */}
       <div className="chat-video-header">
         {WELCOME_VIDEO_URL ? (
@@ -337,6 +341,9 @@ export function WidgetDemo() {
             onClick={() => setLang(lang === "en" ? "es" : "en")}
           >
             {lang === "en" ? t.espanol : t.english}
+          </button>
+          <button className="chat-toolbar-btn" title={darkMode ? "Light mode" : "Dark mode"} onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? "\u2600" : "\u263E"}
           </button>
           <button className="chat-toolbar-btn" title="Restart" onClick={() => { clearSession(DEMO_WIDGET_ID); window.location.reload(); }}>&#8634;</button>
           <button className="chat-toolbar-btn" title="Close">&times;</button>

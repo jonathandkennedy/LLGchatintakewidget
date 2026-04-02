@@ -6,6 +6,7 @@ import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlac
 import { saveSession, loadSession, clearSession } from "@/lib/widget/session-store";
 import { fetchWithRetry } from "@/lib/utils/fetch-retry";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { trackWidgetOpen, trackIntakeStart, trackStepComplete, trackLeadCaptured, trackCallConnected } from "@/lib/integrations/analytics";
 
 type Props = { clientSlug: string };
 
@@ -55,6 +56,10 @@ export function WidgetRuntime({ clientSlug }: Props) {
   const [lang, setLang] = useState<Lang>("en");
   const [restored, setRestored] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return false;
+  });
   const [stepHistory, setStepHistory] = useState<string[]>([]);
   const threadRef = useRef<HTMLDivElement>(null);
 
@@ -98,6 +103,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
         setRestored(true);
       }
       setLoading(false);
+      trackWidgetOpen();
     }
     boot().catch((err) => {
       setError(err instanceof Error ? err.message : "Failed to load widget");
@@ -227,6 +233,10 @@ export function WidgetRuntime({ clientSlug }: Props) {
       throw new Error(json.fieldErrors?.[0]?.message ?? json.error ?? "Failed to save answer");
     }
     if (fieldKey) setAnswers((c) => ({ ...c, [fieldKey]: value }));
+    if (config) {
+      const stepIdx = config.flow.steps.findIndex((s) => s.key === stepKey);
+      trackStepComplete(stepKey, stepIdx + 1);
+    }
     return json;
   }
 
@@ -343,6 +353,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
     try {
       const sid = await ensureSession();
       setSessionId(sid);
+      trackIntakeStart();
       setStepHistory((p) => [...p, currentKey]);
       setCurrentKey(step?.next ?? "matter_type");
     } catch (e) {
@@ -367,6 +378,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
       const completeJson = (await completeRes.json()) as CompleteResponse;
       if (!completeRes.ok || !completeJson.ok) throw new Error("Failed to complete intake");
       setLeadId(completeJson.leadId);
+      trackLeadCaptured(answers.matter_type as string | undefined);
       setStepHistory((p) => [...p, currentKey]);
       setCurrentKey("connecting");
 
@@ -377,6 +389,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
       });
       const connectJson = (await connectRes.json()) as ConnectResponse;
       if (!connectRes.ok) throw new Error(connectJson.reason ?? "Failed to connect call");
+      if (connectJson.status === "initiated") trackCallConnected();
       setStepHistory((p) => [...p, currentKey]);
       setCurrentKey(connectJson.status === "initiated" ? "connected" : "transfer_fallback");
     } catch (e) {
@@ -405,7 +418,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
   const hasName = firstName.trim().length > 0 && lastName.trim().length > 0;
 
   return (
-    <div className="widget-card widget-runtime">
+    <div className={`widget-card widget-runtime ${darkMode ? "dark" : ""}`}>
       {/* Video/Image Header */}
       <div className="chat-video-header">
         {config.branding.welcomeVideoUrl ? (
@@ -434,6 +447,9 @@ export function WidgetRuntime({ clientSlug }: Props) {
         <div className="chat-toolbar-overlay">
           <button className="chat-toolbar-btn chat-lang-btn" onClick={() => setLang(lang === "en" ? "es" : "en")}>
             {lang === "en" ? t.espanol : t.english}
+          </button>
+          <button className="chat-toolbar-btn" title={darkMode ? "Light mode" : "Dark mode"} onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? "\u2600" : "\u263E"}
           </button>
           <button className="chat-toolbar-btn" title="Restart" onClick={() => { clearSession(widgetId); window.location.reload(); }}>&#8634;</button>
           <button className="chat-toolbar-btn" title="Close" onClick={() => window.parent?.postMessage?.("widget-close", "*")}>&times;</button>

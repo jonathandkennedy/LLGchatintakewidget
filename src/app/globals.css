@@ -2101,6 +2101,53 @@ h3 { font-size: 18px; }
   .answer-preview { font-size: 11px; padding: 14px; }
 }
 
+/* === Widget Dark Mode === */
+
+.widget-card.dark {
+  --card: #1e1e2e;
+  --text: #e2e8f0;
+  --text-secondary: #cbd5e1;
+  --muted: #94a3b8;
+  --muted-light: #64748b;
+  --border: #2d2d44;
+  --border-light: #252540;
+  --primary-weak: rgba(37, 99, 235, 0.15);
+  --primary-glow: rgba(37, 99, 235, 0.2);
+  --bg: #16162a;
+  --error-weak: rgba(220, 38, 38, 0.15);
+  --success-weak: rgba(5, 150, 105, 0.15);
+  background: #16162a;
+  color: #e2e8f0;
+}
+
+.widget-card.dark .chat-thread { background: #16162a; }
+.widget-card.dark .chat-bubble-user { background: #3b82f6; color: #fff; }
+.widget-card.dark .chat-bubble-bot { color: #e2e8f0; }
+.widget-card.dark .chat-pill { background: rgba(37, 99, 235, 0.15); border-color: #3b5998; color: #e2e8f0; }
+.widget-card.dark .chat-pill::before { border-color: #4a6fa5; }
+.widget-card.dark .chat-pill:hover:not(:disabled) { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+.widget-card.dark .chat-pill:hover:not(:disabled)::before { border-color: #fff; background: #fff; }
+.widget-card.dark .chat-pill.selected { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+.widget-card.dark .chat-name-input { background: #252540; color: #e2e8f0; border-color: #2d2d44; }
+.widget-card.dark .chat-name-input:focus { background: rgba(37, 99, 235, 0.15); }
+.widget-card.dark .chat-input-field { color: #e2e8f0; border-bottom-color: #3b82f6; }
+.widget-card.dark .chat-input-field::placeholder { color: #64748b; }
+.widget-card.dark .chat-input-bar { background: #1e1e2e; border-top-color: #252540; }
+.widget-card.dark .widget-footer { background: #1e1e2e; border-top-color: #252540; }
+.widget-card.dark .chat-mode-btn { color: #64748b; }
+.widget-card.dark .chat-mode-btn.active { background: #252540; color: #e2e8f0; }
+.widget-card.dark .chat-send-btn { background: #252540; color: #64748b; }
+.widget-card.dark .chat-send-btn.active { background: #3b82f6; color: #fff; }
+.widget-card.dark .chat-submit-bar-btn { background: #252540; color: #64748b; }
+.widget-card.dark .chat-submit-bar-btn.active { background: #3b82f6; color: #fff; }
+.widget-card.dark .typing-indicator { background: #252540; }
+.widget-card.dark .typing-dot { background: #64748b; }
+.widget-card.dark .chat-avatar { background: linear-gradient(135deg, #2d2d44, #3d3d5c); }
+.widget-card.dark .status-pill { background: rgba(5, 150, 105, 0.15); }
+.widget-card.dark .answer-preview { background: #0f0f1a; border-color: #252540; }
+.widget-card.dark .chat-privacy { color: #64748b; }
+.widget-card.dark .chat-video-header { background: #0f0f1a; }
+
 /* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
   .primary-button:hover:not(:disabled) { transform: none; }

@@ -4,6 +4,8 @@ import { sendLeadNotificationEmail } from "@/lib/notifications/email";
 import { sendLeadFollowUpSms } from "@/lib/notifications/sms";
 import { scoreLeadData } from "@/lib/scoring/lead-score";
 import { getActiveTest, selectVariant, recordVariantAssignment, recordVariantConversion } from "@/lib/ab-testing/engine";
+import { fireLeadCreatedWebhook } from "@/lib/integrations/webhooks";
+import { autoAssignLead } from "@/lib/routing/lead-assignment";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -132,6 +134,18 @@ export async function finalizeLeadFromSession(sessionId: string) {
     .eq("id", sessionId);
 
   if (sessionUpdateError) throw sessionUpdateError;
+
+  // Auto-assign lead to team member (fire and forget)
+  autoAssignLead({
+    id: lead.id,
+    client_id: lead.client_id,
+    matter_type: lead.matter_type,
+    incident_state: lead.incident_state,
+    lead_score: scoreResult.total,
+  }).catch((err) => console.error("[assignment] Failed:", err));
+
+  // Fire webhooks (fire and forget)
+  fireLeadCreatedWebhook(lead).catch((err) => console.error("[webhook] Failed:", err));
 
   // Track A/B test conversion
   recordVariantConversion(sessionId).catch((err) => console.error("[ab-test] Failed to record conversion:", err));
