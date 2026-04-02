@@ -2,6 +2,8 @@ import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateLeadStatusAction } from "./statusAction";
 import { scoreLeadData, getScoreLabel } from "@/lib/scoring/lead-score";
+import { LeadNotes } from "@/components/admin/LeadNotes";
+import { LeadTimeline } from "@/components/admin/LeadTimeline";
 
 export const dynamic = "force-dynamic";
 
@@ -167,6 +169,20 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
           </tbody>
         </table>
         <div style={{ marginTop: 20 }}><Link href="/admin/leads">Back to leads</Link></div>
+      </section>
+
+      <section className="panel">
+        <h2>Timeline</h2>
+        <div style={{ marginTop: 12 }}>
+          <LeadTimeline lead={lead} answers={answers} calls={calls} sms={sms} />
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2>Internal Notes</h2>
+        <div style={{ marginTop: 12 }}>
+          <LeadNotes leadId={lead.id} />
+        </div>
       </section>
     </main>
   );

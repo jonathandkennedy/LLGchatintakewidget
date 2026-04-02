@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/admin/analytics", label: "Analytics", icon: "A" },
   { href: "/admin/flow-editor", label: "Flow Editor", icon: "F" },
   { href: "/admin/routing", label: "Routing", icon: "R" },
+  { href: "/admin/team", label: "Team", icon: "P" },
   { href: "/admin/branding", label: "Branding", icon: "B" },
   { href: "/admin/webhooks", label: "Webhooks", icon: "W" },
   { href: "/admin/ab-testing", label: "A/B Tests", icon: "T" },
