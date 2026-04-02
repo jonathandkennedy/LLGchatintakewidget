@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { DEFAULT_FLOW } from "@/lib/widget/default-flow";
 import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlaceholder, type Lang } from "@/lib/widget/i18n";
+import { saveSession, loadSession, clearSession } from "@/lib/widget/session-store";
 import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
@@ -70,6 +71,8 @@ function CheckIcon() {
   );
 }
 
+const DEMO_WIDGET_ID = "demo";
+
 export function WidgetDemo() {
   const [currentKey, setCurrentKey] = useState<string>(DEFAULT_FLOW.steps[0]?.key ?? "welcome");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -80,10 +83,37 @@ export function WidgetDemo() {
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
   const [inputMode, setInputMode] = useState<"text" | "voice" | "video">("text");
   const [lang, setLang] = useState<Lang>("en");
+  const [restored, setRestored] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const t = translations[lang];
   const step = useMemo(() => DEFAULT_FLOW.steps.find((item) => item.key === currentKey), [currentKey]);
+
+  // Restore saved session on mount
+  useEffect(() => {
+    const saved = loadSession(DEMO_WIDGET_ID);
+    if (saved && saved.currentKey !== "welcome") {
+      setCurrentKey(saved.currentKey);
+      setAnswers(saved.answers);
+      setMessages(saved.messages);
+      setLang(saved.lang);
+      setRestored(true);
+    } else {
+      setRestored(true);
+    }
+  }, []);
+
+  // Auto-save on every state change (debounced by React batching)
+  useEffect(() => {
+    if (!restored) return;
+    // Don't save terminal states
+    const terminalSteps = ["connected", "transfer_fallback", "callback_requested_confirmation"];
+    if (terminalSteps.includes(currentKey)) {
+      clearSession(DEMO_WIDGET_ID);
+      return;
+    }
+    saveSession(DEMO_WIDGET_ID, { currentKey, answers, messages, lang });
+  }, [currentKey, answers, messages, lang, restored]);
 
   const scrollToBottom = useCallback(() => {
     if (threadRef.current) {
@@ -95,13 +125,17 @@ export function WidgetDemo() {
 
   useEffect(() => { scrollToBottom(); }, [messages, currentKey, scrollToBottom]);
 
+  // Add bot message when step changes - but skip if restoring
   useEffect(() => {
-    if (!step) return;
+    if (!step || !restored) return;
+    // If we just restored, the messages already contain the bot message for this step
+    const alreadyHasMsg = messages.some((m) => m.role === "bot" && m.stepKey === step.key);
+    if (alreadyHasMsg) return;
     const title = getStepTitle(lang, step.key) ?? step.title;
     const desc = getStepDescription(lang, step.key) ?? step.description;
     const text = title + (desc ? "\n" + desc : "");
     setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: t.timeAgo, stepKey: step.key }]);
-  }, [currentKey, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentKey, lang, restored]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function addUserMessage(text: string, stepKey?: string) {
     setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: t.timeAgo, stepKey }]);
@@ -187,7 +221,7 @@ export function WidgetDemo() {
           >
             {lang === "en" ? t.espanol : t.english}
           </button>
-          <button className="chat-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
+          <button className="chat-toolbar-btn" title="Restart" onClick={() => { clearSession(DEMO_WIDGET_ID); window.location.reload(); }}>&#8634;</button>
           <button className="chat-toolbar-btn" title="Close">&times;</button>
         </div>
       </div>
@@ -294,7 +328,7 @@ export function WidgetDemo() {
         {(step.type === "connected" || step.type === "fallback" || step.type === "callback_confirmation") && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
             <pre className="answer-preview">{JSON.stringify(answers, null, 2)}</pre>
-            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>{t.restartDemo}</button>
+            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => { clearSession(DEMO_WIDGET_ID); window.location.reload(); }}>{t.restartDemo}</button>
           </div>
         )}
       </div>

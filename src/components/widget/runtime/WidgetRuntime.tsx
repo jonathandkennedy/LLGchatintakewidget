@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetPublicConfig, WidgetStep } from "@/types/widget";
 import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlaceholder, type Lang } from "@/lib/widget/i18n";
+import { saveSession, loadSession, clearSession } from "@/lib/widget/session-store";
 
 type Props = { clientSlug: string };
 
@@ -21,6 +22,7 @@ type ChatMessage = {
   role: "bot" | "user";
   text: string;
   timestamp: string;
+  stepKey?: string;
 };
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
@@ -42,21 +44,37 @@ export function WidgetRuntime({ clientSlug }: Props) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
+  const [restored, setRestored] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const t = translations[lang];
+  const widgetId = `runtime_${clientSlug}`;
 
   useEffect(() => {
     async function boot() {
       const response = await fetch(`/api/widget/config?clientSlug=${encodeURIComponent(clientSlug)}`, { cache: "no-store" });
       const nextConfig = await response.json();
       setConfig(nextConfig);
-      setCurrentKey(nextConfig.flow.steps[0]?.key ?? "welcome");
+
+      // Try to restore saved session
+      const saved = loadSession(`runtime_${clientSlug}`);
+      if (saved && saved.currentKey !== "welcome" && saved.sessionId) {
+        setCurrentKey(saved.currentKey);
+        setAnswers(saved.answers);
+        setMessages(saved.messages);
+        setLang(saved.lang);
+        setSessionId(saved.sessionId);
+        setRestored(true);
+      } else {
+        setCurrentKey(nextConfig.flow.steps[0]?.key ?? "welcome");
+        setRestored(true);
+      }
       setLoading(false);
     }
     boot().catch((err) => {
       setError(err instanceof Error ? err.message : "Failed to load widget");
       setLoading(false);
+      setRestored(true);
     });
   }, [clientSlug]);
 
@@ -66,15 +84,29 @@ export function WidgetRuntime({ clientSlug }: Props) {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
   }, [messages, currentKey]);
 
+  // Auto-save on state changes
   useEffect(() => {
-    if (!step || loading) return;
+    if (!restored || loading) return;
+    const terminalSteps = ["connected", "transfer_fallback", "callback_requested_confirmation"];
+    if (terminalSteps.includes(currentKey)) {
+      clearSession(widgetId);
+      return;
+    }
+    saveSession(widgetId, { currentKey, answers, messages, lang, sessionId });
+  }, [currentKey, answers, messages, lang, restored, loading, sessionId, widgetId]);
+
+  useEffect(() => {
+    if (!step || loading || !restored) return;
+    // Skip if message already exists for this step (e.g. after restore)
+    const alreadyHasMsg = messages.some((m) => m.role === "bot" && m.stepKey === step.key);
+    if (alreadyHasMsg) return;
     const title = getStepTitle(lang, step.key) ?? step.title;
     const desc = getStepDescription(lang, step.key) ?? step.description;
     const welcomeText = step.type === "welcome" && config
       ? (getStepTitle(lang, "welcome") ?? config.branding.welcomeHeadline) + "\n" + (getStepDescription(lang, "welcome") ?? config.branding.welcomeBody ?? "")
       : title + (desc ? "\n" + desc : "");
     addBotMessage(welcomeText);
-  }, [currentKey, loading, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentKey, loading, lang, restored]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setInputValue("");
@@ -83,11 +115,11 @@ export function WidgetRuntime({ clientSlug }: Props) {
   }, [currentKey]);
 
   function addBotMessage(text: string) {
-    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: timeAgo() }]);
+    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: t.timeAgo, stepKey: currentKey }]);
   }
 
   function addUserMessage(text: string) {
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: timeAgo() }]);
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: t.timeAgo }]);
   }
 
   async function ensureSession() {
@@ -269,7 +301,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
           <button className="chat-toolbar-btn chat-lang-btn" onClick={() => setLang(lang === "en" ? "es" : "en")}>
             {lang === "en" ? t.espanol : t.english}
           </button>
-          <button className="chat-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
+          <button className="chat-toolbar-btn" title="Restart" onClick={() => { clearSession(widgetId); window.location.reload(); }}>&#8634;</button>
           <button className="chat-toolbar-btn" title="Close" onClick={() => window.parent?.postMessage?.("widget-close", "*")}>&times;</button>
         </div>
       </div>
@@ -376,7 +408,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
         {(step.type === "connected" || step.type === "fallback" || step.type === "callback_confirmation") && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
             <div className="answer-preview">Lead: {leadId ?? "pending"}{"\n"}Status: {step.type}</div>
-            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>{t.restart}</button>
+            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => { clearSession(widgetId); window.location.reload(); }}>{t.restart}</button>
           </div>
         )}
       </div>
