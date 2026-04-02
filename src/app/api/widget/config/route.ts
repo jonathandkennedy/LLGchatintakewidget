@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPublishedWidgetConfigBySlug } from "@/lib/widget/config";
+import { checkRateLimit } from "@/lib/middleware/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const limited = checkRateLimit(request, "widget/config");
+  if (limited) return limited;
+
   try {
     const slug = request.nextUrl.searchParams.get("clientSlug");
     if (!slug) {

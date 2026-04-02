@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { readJsonBody } from "@/lib/utils/json";
+import { checkRateLimit } from "@/lib/middleware/rate-limit";
 
 type RevertBody = {
   sessionId: string;
@@ -12,6 +13,9 @@ type RevertBody = {
  * that were submitted at or after that step in the flow.
  */
 export async function POST(request: Request) {
+  const limited = checkRateLimit(request, "widget/session/revert");
+  if (limited) return limited;
+
   try {
     const body = await readJsonBody<RevertBody>(request);
 

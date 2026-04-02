@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { saveAnswerAndGetNextStep } from "@/lib/widget/flow-engine";
 import { readJsonBody } from "@/lib/utils/json";
+import { checkRateLimit } from "@/lib/middleware/rate-limit";
 
 type AnswerBody = {
   sessionId: string;
@@ -10,6 +11,9 @@ type AnswerBody = {
 };
 
 export async function POST(request: Request) {
+  const limited = checkRateLimit(request, "widget/session/answer");
+  if (limited) return limited;
+
   try {
     const body = await readJsonBody<AnswerBody>(request);
     const result = await saveAnswerAndGetNextStep(body);
