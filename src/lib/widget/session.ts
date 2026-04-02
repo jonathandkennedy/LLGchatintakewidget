@@ -6,6 +6,7 @@ import { scoreLeadData } from "@/lib/scoring/lead-score";
 import { getActiveTest, selectVariant, recordVariantAssignment, recordVariantConversion } from "@/lib/ab-testing/engine";
 import { fireLeadCreatedWebhook } from "@/lib/integrations/webhooks";
 import { autoAssignLead } from "@/lib/routing/lead-assignment";
+import { checkDuplicate, flagDuplicate } from "@/lib/monitoring/duplicates";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -134,6 +135,18 @@ export async function finalizeLeadFromSession(sessionId: string) {
     .eq("id", sessionId);
 
   if (sessionUpdateError) throw sessionUpdateError;
+
+  // Check for duplicates (fire and forget)
+  checkDuplicate({
+    phone: lead.phone_e164,
+    email: lead.email,
+    firstName: lead.first_name,
+    lastName: lead.last_name,
+  }).then((dup) => {
+    if (dup.isDuplicate && dup.matchedLeadId && dup.matchType) {
+      flagDuplicate(lead.id, dup.matchedLeadId, dup.matchType);
+    }
+  }).catch((err) => console.error("[duplicate] Check failed:", err));
 
   // Auto-assign lead to team member (fire and forget)
   autoAssignLead({

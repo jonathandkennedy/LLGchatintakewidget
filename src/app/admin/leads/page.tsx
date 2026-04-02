@@ -11,7 +11,7 @@ type SearchParams = {
 async function getLeads(searchParams: SearchParams) {
   let builder = supabaseAdmin
     .from("leads")
-    .select("id, created_at, status, matter_type, first_name, last_name, phone_e164, incident_state, incident_city, lead_score, lead_score_tier")
+    .select("id, created_at, status, matter_type, first_name, last_name, phone_e164, incident_state, incident_city, lead_score, lead_score_tier, is_duplicate, assigned_to_name")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -77,7 +77,10 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: S
               const location = [lead.incident_city, lead.incident_state].filter(Boolean).join(", ") || "\u2014";
               return (
                 <tr key={lead.id}>
-                  <td><Link href={`/admin/leads/${lead.id}`}>{name}</Link></td>
+                  <td>
+                    <Link href={`/admin/leads/${lead.id}`}>{name}</Link>
+                    {lead.is_duplicate && <span className="dup-badge" title="Possible duplicate">DUP</span>}
+                  </td>
                   <td>{lead.lead_score != null ? <span className={`score-badge score-${lead.lead_score_tier ?? "cold"}`}>{lead.lead_score}</span> : "\u2014"}</td>
                   <td>{lead.matter_type ?? "\u2014"}</td>
                   <td><span className="status-chip">{lead.status}</span></td>

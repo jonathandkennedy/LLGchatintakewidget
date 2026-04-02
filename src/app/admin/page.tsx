@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getBreachedLeads, formatDuration } from "@/lib/monitoring/sla";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,8 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      <SLAAlerts />
+
       <section className="admin-card" style={{ marginTop: 24 }}>
         <div className="admin-card-header">
           <h2>Recent Leads</h2>
@@ -119,5 +122,45 @@ export default async function AdminDashboardPage() {
         </table>
       </section>
     </div>
+  );
+}
+
+async function SLAAlerts() {
+  const breached = await getBreachedLeads();
+  if (breached.length === 0) return null;
+
+  return (
+    <section className="admin-card sla-alert-card" style={{ marginTop: 24 }}>
+      <div className="admin-card-header">
+        <h2 style={{ color: "var(--error)" }}>SLA Breaches ({breached.length})</h2>
+      </div>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Lead</th>
+            <th>Score</th>
+            <th>Matter</th>
+            <th>Assigned To</th>
+            <th>Waiting</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {breached.map((lead) => {
+            const name = [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "Unknown";
+            return (
+              <tr key={lead.id}>
+                <td><Link href={`/admin/leads/${lead.id}`}>{name}</Link></td>
+                <td>{lead.lead_score != null ? <span className={`score-badge score-${lead.lead_score_tier ?? "cold"}`}>{lead.lead_score}</span> : "\u2014"}</td>
+                <td>{lead.matter_type ?? "\u2014"}</td>
+                <td>{lead.assigned_to_name ?? <span className="muted">Unassigned</span>}</td>
+                <td><span style={{ color: "var(--error)", fontWeight: 700 }}>{formatDuration(lead.minutes_since_created)}</span></td>
+                <td><span className="status-chip">{lead.status}</span></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
   );
 }
