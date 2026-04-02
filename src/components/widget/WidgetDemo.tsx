@@ -90,6 +90,7 @@ export function WidgetDemo() {
   const [inputMode, setInputMode] = useState<"text" | "voice" | "video">("text");
   const [lang, setLang] = useState<Lang>("en");
   const [restored, setRestored] = useState(false);
+  const [typing, setTyping] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const t = translations[lang];
@@ -129,18 +130,25 @@ export function WidgetDemo() {
     }
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [messages, currentKey, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, currentKey, typing, scrollToBottom]);
 
-  // Add bot message when step changes - but skip if restoring
+  // Add bot message when step changes - show typing first, then message
   useEffect(() => {
     if (!step || !restored) return;
-    // If we just restored, the messages already contain the bot message for this step
     const alreadyHasMsg = messages.some((m) => m.role === "bot" && m.stepKey === step.key);
     if (alreadyHasMsg) return;
-    const title = getStepTitle(lang, step.key) ?? step.title;
-    const desc = getStepDescription(lang, step.key) ?? step.description;
-    const text = title + (desc ? "\n" + desc : "");
-    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: t.timeAgo, stepKey: step.key }]);
+
+    // Show typing indicator, then add message after delay
+    setTyping(true);
+    const delay = step.key === "welcome" ? 600 : 800 + Math.random() * 400;
+    const timer = setTimeout(() => {
+      setTyping(false);
+      const title = getStepTitle(lang, step.key) ?? step.title;
+      const desc = getStepDescription(lang, step.key) ?? step.description;
+      const text = title + (desc ? "\n" + desc : "");
+      setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: t.timeAgo, stepKey: step.key }]);
+    }, delay);
+    return () => { clearTimeout(timer); setTyping(false); };
   }, [currentKey, lang, restored]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function addUserMessage(text: string, stepKey?: string) {
@@ -268,6 +276,20 @@ export function WidgetDemo() {
             )}
           </div>
         ))}
+
+        {/* Typing indicator */}
+        {typing && (
+          <div className="chat-msg chat-msg-bot">
+            <div className="typing-indicator">
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+            </div>
+            <div className="chat-avatar-row">
+              {AVATAR_IMAGE_URL ? <img src={AVATAR_IMAGE_URL} alt="" className="chat-avatar" /> : <div className="chat-avatar" />}
+            </div>
+          </div>
+        )}
 
         {/* Privacy notice after first answer */}
         {messages.filter((m) => m.role === "user").length === 1 && (

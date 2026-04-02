@@ -45,6 +45,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
   const [restored, setRestored] = useState(false);
+  const [typing, setTyping] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const t = translations[lang];
@@ -82,7 +83,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
-  }, [messages, currentKey]);
+  }, [messages, currentKey, typing]);
 
   // Auto-save on state changes
   useEffect(() => {
@@ -97,15 +98,21 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   useEffect(() => {
     if (!step || loading || !restored) return;
-    // Skip if message already exists for this step (e.g. after restore)
     const alreadyHasMsg = messages.some((m) => m.role === "bot" && m.stepKey === step.key);
     if (alreadyHasMsg) return;
-    const title = getStepTitle(lang, step.key) ?? step.title;
-    const desc = getStepDescription(lang, step.key) ?? step.description;
-    const welcomeText = step.type === "welcome" && config
-      ? (getStepTitle(lang, "welcome") ?? config.branding.welcomeHeadline) + "\n" + (getStepDescription(lang, "welcome") ?? config.branding.welcomeBody ?? "")
-      : title + (desc ? "\n" + desc : "");
-    addBotMessage(welcomeText);
+
+    setTyping(true);
+    const delay = step.key === "welcome" ? 600 : 800 + Math.random() * 400;
+    const timer = setTimeout(() => {
+      setTyping(false);
+      const title = getStepTitle(lang, step.key) ?? step.title;
+      const desc = getStepDescription(lang, step.key) ?? step.description;
+      const welcomeText = step.type === "welcome" && config
+        ? (getStepTitle(lang, "welcome") ?? config.branding.welcomeHeadline) + "\n" + (getStepDescription(lang, "welcome") ?? config.branding.welcomeBody ?? "")
+        : title + (desc ? "\n" + desc : "");
+      addBotMessage(welcomeText);
+    }, delay);
+    return () => { clearTimeout(timer); setTyping(false); };
   }, [currentKey, loading, lang, restored]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -336,6 +343,20 @@ export function WidgetRuntime({ clientSlug }: Props) {
             )}
           </div>
         ))}
+
+        {/* Typing indicator */}
+        {typing && (
+          <div className="chat-msg chat-msg-bot">
+            <div className="typing-indicator">
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+            </div>
+            <div className="chat-avatar-row">
+              <div className="chat-avatar" />
+            </div>
+          </div>
+        )}
 
         {/* Privacy notice after welcome */}
         {messages.length === 1 && config.branding.privacyUrl && (
