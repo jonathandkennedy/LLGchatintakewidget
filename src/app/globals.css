@@ -1348,6 +1348,78 @@ h3 { font-size: 18px; }
   background: var(--primary-weak);
 }
 
+/* === Branding Editor === */
+
+.branding-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 28px;
+  align-items: start;
+}
+
+.branding-form {
+  max-width: none;
+}
+
+.branding-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.branding-color-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.branding-color-picker {
+  width: 48px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+  background: var(--card);
+}
+
+.branding-preview-col {
+  position: sticky;
+  top: 80px;
+}
+
+.branding-preview-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.admin-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.admin-label .text-input {
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .branding-layout {
+    grid-template-columns: 1fr;
+  }
+  .branding-preview-col {
+    position: static;
+    order: -1;
+  }
+}
+
 /* Admin KPI grids */
 .kpi-grid-4 {
   display: grid;
