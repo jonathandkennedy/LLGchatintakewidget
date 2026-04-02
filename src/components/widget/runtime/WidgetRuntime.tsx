@@ -185,7 +185,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
   if (!config || !step) return <div className="widget-card"><div className="widget-body">Widget unavailable.</div></div>;
 
   return (
-    <div className="widget-card widget-runtime" style={{ "--widget-primary": config.branding.primaryColor } as React.CSSProperties}>
+    <div className="widget-card widget-runtime">
       <div className="widget-header">
         <div className="eyebrow">{config.branding.widgetTitle}</div>
         <h2>{step.type === "welcome" ? config.branding.welcomeHeadline : step.title}</h2>
