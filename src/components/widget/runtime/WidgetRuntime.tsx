@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetPublicConfig, WidgetStep } from "@/types/widget";
 
-type Props = {
-  clientSlug: string;
-};
+type Props = { clientSlug: string };
 
 type StepResponse = {
   ok?: boolean;
@@ -15,16 +13,18 @@ type StepResponse = {
 };
 
 type CompleteResponse = { ok: boolean; leadId: string; status: string };
-
 type ConnectResponse = { ok: boolean; status: string; reason?: string };
+
+type ChatMessage = {
+  id: string;
+  role: "bot" | "user";
+  text: string;
+  timestamp: string;
+};
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
-function getStepIndex(config: WidgetPublicConfig | null, key: string): number {
-  if (!config) return 0;
-  const idx = config.flow.steps.findIndex((s) => s.key === key);
-  return idx >= 0 ? idx : 0;
-}
+function timeAgo() { return "a few seconds ago"; }
 
 export function WidgetRuntime({ clientSlug }: Props) {
   const [config, setConfig] = useState<WidgetPublicConfig | null>(null);
@@ -32,13 +32,15 @@ export function WidgetRuntime({ clientSlug }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const threadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function boot() {
@@ -48,19 +50,25 @@ export function WidgetRuntime({ clientSlug }: Props) {
       setCurrentKey(nextConfig.flow.steps[0]?.key ?? "welcome");
       setLoading(false);
     }
-    boot().catch((bootError) => {
-      setError(bootError instanceof Error ? bootError.message : "Failed to load widget");
+    boot().catch((err) => {
+      setError(err instanceof Error ? err.message : "Failed to load widget");
       setLoading(false);
     });
   }, [clientSlug]);
 
-  const step = useMemo(() => config?.flow.steps.find((item) => item.key === currentKey), [config, currentKey]);
+  const step = useMemo(() => config?.flow.steps.find((s) => s.key === currentKey), [config, currentKey]);
 
-  const totalSteps = config ? config.flow.steps.filter((s) =>
-    !["connecting", "connected", "fallback", "callback_confirmation", "transfer_fallback"].includes(s.type)
-  ).length : 1;
-  const stepIndex = getStepIndex(config, currentKey);
-  const progress = Math.min((stepIndex / totalSteps) * 100, 100);
+  useEffect(() => {
+    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
+  }, [messages, currentKey]);
+
+  useEffect(() => {
+    if (!step || loading) return;
+    const welcomeText = step.type === "welcome" && config
+      ? config.branding.welcomeHeadline + (config.branding.welcomeBody ? "\n" + config.branding.welcomeBody : "")
+      : step.title + (step.description ? "\n" + step.description : "");
+    addBotMessage(welcomeText);
+  }, [currentKey, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setInputValue("");
@@ -68,10 +76,17 @@ export function WidgetRuntime({ clientSlug }: Props) {
     setError("");
   }, [currentKey]);
 
+  function addBotMessage(text: string) {
+    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: timeAgo() }]);
+  }
+
+  function addUserMessage(text: string) {
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: timeAgo() }]);
+  }
+
   async function ensureSession() {
     if (!config) throw new Error("Widget config missing");
     if (sessionId) return sessionId;
-
     const response = await fetch("/api/widget/session/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -83,7 +98,6 @@ export function WidgetRuntime({ clientSlug }: Props) {
         deviceType: typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "desktop",
       }),
     });
-
     const json = await response.json();
     if (!response.ok) throw new Error(json.error ?? "Failed to create session");
     setSessionId(json.sessionId);
@@ -91,103 +105,126 @@ export function WidgetRuntime({ clientSlug }: Props) {
   }
 
   async function submitField(fieldKey: string, value: unknown, stepKey = currentKey) {
-    const activeSessionId = await ensureSession();
-
+    const sid = await ensureSession();
     const response = await fetch("/api/widget/session/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: activeSessionId, stepKey, fieldKey, value }),
+      body: JSON.stringify({ sessionId: sid, stepKey, fieldKey, value }),
     });
-
     const json = (await response.json()) as StepResponse;
     if (!response.ok || json.ok === false) {
-      const fieldError = json.fieldErrors?.[0]?.message;
-      throw new Error(fieldError ?? json.error ?? "Failed to save answer");
+      throw new Error(json.fieldErrors?.[0]?.message ?? json.error ?? "Failed to save answer");
     }
-
-    if (fieldKey) {
-      setAnswers((current) => ({ ...current, [fieldKey]: value }));
-    }
-
+    if (fieldKey) setAnswers((c) => ({ ...c, [fieldKey]: value }));
     return json;
   }
 
-  async function handleContinue() {
-    if (!step) return;
+  async function handleOptionSelect(optionKey: string, label: string) {
+    if (!step?.fieldKey) return;
     setSubmitting(true);
     setError("");
-
+    addUserMessage(label);
     try {
-      if (step.type === "welcome") {
-        const activeSessionId = await ensureSession();
-        setSessionId(activeSessionId);
-        setCurrentKey(step.next ?? "matter_type");
-        return;
-      }
-
-      if (step.type === "single_select" || step.type === "date_range") return;
-
-      if (step.type === "long_text" || step.type === "short_text" || step.type === "phone" || step.type === "email" || step.type === "textarea_optional" || step.type === "dropdown") {
-        const json = await submitField(String(step.fieldKey), inputValue);
-        if (json.nextStepKey) setCurrentKey(json.nextStepKey);
-        return;
-      }
-
-      if (step.type === "multi_select") {
-        const json = await submitField(String(step.fieldKey), selectedMulti);
-        if (json.nextStepKey) setCurrentKey(json.nextStepKey);
-        return;
-      }
-
-      if (step.type === "name") {
-        const activeSessionId = await ensureSession();
-        await Promise.all([
-          submitField("first_name", firstName, step.key),
-          submitField("last_name", lastName, step.key),
-        ]);
-        setAnswers((current) => ({ ...current, first_name: firstName, last_name: lastName }));
-        setSessionId(activeSessionId);
-        setCurrentKey(step.next ?? "phone");
-        return;
-      }
-
-      if (step.type === "transfer_ready") {
-        const activeSessionId = await ensureSession();
-        const completeResponse = await fetch("/api/widget/session/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: activeSessionId }),
-        });
-        const completeJson = (await completeResponse.json()) as CompleteResponse;
-        if (!completeResponse.ok || !completeJson.ok) throw new Error("Failed to complete intake");
-        setLeadId(completeJson.leadId);
-        setCurrentKey("connecting");
-
-        const connectResponse = await fetch("/api/widget/call/connect", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: activeSessionId, leadId: completeJson.leadId }),
-        });
-        const connectJson = (await connectResponse.json()) as ConnectResponse;
-        if (!connectResponse.ok) throw new Error(connectJson.reason ?? "Failed to connect call");
-        setCurrentKey(connectJson.status === "initiated" ? "connected" : "transfer_fallback");
-      }
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Something went wrong");
+      const json = await submitField(step.fieldKey, optionKey);
+      if (json.nextStepKey) setCurrentKey(json.nextStepKey);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleOptionSelect(optionKey: string) {
-    if (!step?.fieldKey) return;
+  async function handleTextSubmit() {
+    if (!step || !inputValue.trim()) return;
     setSubmitting(true);
     setError("");
+    addUserMessage(inputValue);
     try {
-      const json = await submitField(step.fieldKey, optionKey);
+      const json = await submitField(String(step.fieldKey), inputValue);
       if (json.nextStepKey) setCurrentKey(json.nextStepKey);
-    } catch (selectError) {
-      setError(selectError instanceof Error ? selectError.message : "Something went wrong");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleNameSubmit() {
+    if (!step || !firstName.trim() || !lastName.trim()) return;
+    setSubmitting(true);
+    setError("");
+    addUserMessage(`${firstName} ${lastName}`);
+    try {
+      await ensureSession();
+      await Promise.all([
+        submitField("first_name", firstName, step.key),
+        submitField("last_name", lastName, step.key),
+      ]);
+      setAnswers((c) => ({ ...c, first_name: firstName, last_name: lastName }));
+      setCurrentKey(step.next ?? "phone");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleMultiSubmit() {
+    if (!step) return;
+    setSubmitting(true);
+    setError("");
+    addUserMessage(selectedMulti.join(", "));
+    try {
+      const json = await submitField(String(step.fieldKey), selectedMulti);
+      if (json.nextStepKey) setCurrentKey(json.nextStepKey);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleWelcome() {
+    setSubmitting(true);
+    addUserMessage("Start intake");
+    try {
+      const sid = await ensureSession();
+      setSessionId(sid);
+      setCurrentKey(step?.next ?? "matter_type");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleTransfer() {
+    if (!step) return;
+    setSubmitting(true);
+    setError("");
+    addUserMessage("Connect me now");
+    try {
+      const sid = await ensureSession();
+      const completeRes = await fetch("/api/widget/session/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sid }),
+      });
+      const completeJson = (await completeRes.json()) as CompleteResponse;
+      if (!completeRes.ok || !completeJson.ok) throw new Error("Failed to complete intake");
+      setLeadId(completeJson.leadId);
+      setCurrentKey("connecting");
+
+      const connectRes = await fetch("/api/widget/call/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sid, leadId: completeJson.leadId }),
+      });
+      const connectJson = (await connectRes.json()) as ConnectResponse;
+      if (!connectRes.ok) throw new Error(connectJson.reason ?? "Failed to connect call");
+      setCurrentKey(connectJson.status === "initiated" ? "connected" : "transfer_fallback");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSubmitting(false);
     }
@@ -196,133 +233,183 @@ export function WidgetRuntime({ clientSlug }: Props) {
   if (loading) {
     return (
       <div className="widget-card">
-        <div className="widget-body">
+        <div className="chat-thread">
           <div className="loading-skeleton">
             <div className="loading-spinner" />
-            <div className="loading-text">Loading widget...</div>
+            <div className="loading-text">Loading...</div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!config || !step) return <div className="widget-card"><div className="widget-body">Widget unavailable.</div></div>;
+  if (!config || !step) return <div className="widget-card"><div className="chat-thread">Widget unavailable.</div></div>;
 
-  const showProgress = step.type !== "welcome" && step.type !== "connected" && step.type !== "fallback" && step.type !== "callback_confirmation" && step.type !== "connecting";
+  const hasInput = inputValue.trim().length > 0;
+  const hasName = firstName.trim().length > 0 && lastName.trim().length > 0;
 
   return (
-    <div className="widget-card widget-runtime" style={{ ["--widget-primary" as string]: config.branding.primaryColor }}>
-      <div className="widget-header">
-        <div className="eyebrow">{config.branding.widgetTitle}</div>
-        <h2>{step.type === "welcome" ? config.branding.welcomeHeadline : step.title}</h2>
-        <p>{step.type === "welcome" ? config.branding.welcomeBody : (step.description ?? step.helperText ?? "")}</p>
-        {showProgress && (
-          <div className="progress-bar">
-            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-          </div>
-        )}
+    <div className="widget-card widget-runtime">
+      {/* Toolbar */}
+      <div className="widget-toolbar">
+        <button className="widget-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
+        <button className="widget-toolbar-btn" title="Close" onClick={() => window.parent?.postMessage?.("widget-close", "*")}>&times;</button>
       </div>
 
-      <div className="widget-body">
-        {error ? <div className="error-banner">{error}</div> : null}
+      {/* Chat thread */}
+      <div className="chat-thread" ref={threadRef}>
+        {error && <div className="error-banner">{error}</div>}
 
+        {messages.map((msg) => (
+          <div key={msg.id} className={`chat-msg ${msg.role === "bot" ? "chat-msg-bot" : "chat-msg-user"}`}>
+            <div className={`chat-bubble ${msg.role === "bot" ? "chat-bubble-bot" : "chat-bubble-user"}`}>
+              {msg.text}
+            </div>
+            {msg.role === "bot" ? (
+              <div className="chat-avatar-row">
+                <div className="chat-avatar" />
+                <span className="chat-timestamp">{msg.timestamp}</span>
+              </div>
+            ) : (
+              <div className="chat-timestamp-right">{msg.timestamp}</div>
+            )}
+          </div>
+        ))}
+
+        {/* Privacy notice after welcome */}
+        {messages.length === 1 && config.branding.privacyUrl && (
+          <div className="chat-privacy">
+            This transcript will be recorded by {config.branding.widgetTitle} and its affiliates. We respect your privacy.{" "}
+            <a href={config.branding.privacyUrl} target="_blank" rel="noreferrer">Privacy Policy</a>
+          </div>
+        )}
+
+        {/* Interactive options */}
         {step.type === "welcome" && (
-          <div className="stack">
-            <ul className="bullet-list">
-              <li>Free case review</li>
-              <li>Takes about 1 minute</li>
-              <li>Private and no obligation</li>
-            </ul>
-            <button className="primary-button" disabled={submitting} onClick={handleContinue}>Start intake</button>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
+            <button className="chat-pill" disabled={submitting} onClick={handleWelcome}>Start intake</button>
           </div>
         )}
 
         {(step.type === "single_select" || step.type === "date_range") && (
-          <div className="stack">
-            {step.options?.map((option) => (
-              <button key={option.key} className="option-card" disabled={submitting} onClick={() => handleOptionSelect(option.key)}>
-                {option.label}
-              </button>
-            ))}
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
+              {step.options?.map((opt) => (
+                <button key={opt.key} className="chat-pill" disabled={submitting} onClick={() => handleOptionSelect(opt.key, opt.label)}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {step.type === "multi_select" && (
-          <div className="stack">
-            {step.options?.map((option) => (
-              <button
-                key={option.key}
-                className={`option-card ${selectedMulti.includes(option.key) ? "selected" : ""}`}
-                disabled={submitting}
-                onClick={() => setSelectedMulti((current) => current.includes(option.key) ? current.filter((item) => item !== option.key) : [...current, option.key])}
-              >
-                {option.label}
-              </button>
-            ))}
-            <button className="primary-button" disabled={submitting} onClick={handleContinue}>Continue</button>
-          </div>
-        )}
-
-        {(step.type === "long_text" || step.type === "textarea_optional") && (
-          <div className="stack">
-            <textarea className="text-input text-area" value={inputValue} placeholder={step.placeholder} onChange={(event) => setInputValue(event.target.value)} />
-            <button className="primary-button" disabled={submitting} onClick={handleContinue}>Continue</button>
-          </div>
-        )}
-
-        {(step.type === "short_text" || step.type === "phone" || step.type === "email") && (
-          <div className="stack">
-            <input className="text-input" type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"} value={inputValue} placeholder={step.placeholder ?? (step.type === "phone" ? "(555) 555-5555" : "Type here") } onChange={(event) => setInputValue(event.target.value)} />
-            <button className="primary-button" disabled={submitting} onClick={handleContinue}>Continue</button>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
+              {step.options?.map((opt) => (
+                <button
+                  key={opt.key}
+                  className={`chat-pill ${selectedMulti.includes(opt.key) ? "selected" : ""}`}
+                  disabled={submitting}
+                  onClick={() => setSelectedMulti((c) => c.includes(opt.key) ? c.filter((k) => k !== opt.key) : [...c, opt.key])}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {selectedMulti.length > 0 && (
+              <button className="chat-pill selected" style={{ marginTop: 8 }} disabled={submitting} onClick={handleMultiSubmit}>Continue</button>
+            )}
           </div>
         )}
 
         {step.type === "dropdown" && (
-          <div className="stack">
-            <select className="text-input" value={inputValue} onChange={(event) => setInputValue(event.target.value)}>
-              <option value="">Select a state</option>
-              {STATE_OPTIONS.map((state) => <option key={state} value={state}>{state}</option>)}
-            </select>
-            <button className="primary-button" disabled={submitting} onClick={handleContinue}>Continue</button>
-          </div>
-        )}
-
-        {step.type === "name" && (
-          <div className="stack">
-            <div className="name-grid">
-              <input className="text-input" placeholder="First name" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
-              <input className="text-input" placeholder="Last name" value={lastName} onChange={(event) => setLastName(event.target.value)} />
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
+              {STATE_OPTIONS.map((state) => (
+                <button key={state} className="chat-pill" disabled={submitting} onClick={() => handleOptionSelect(state, state)}>
+                  {state}
+                </button>
+              ))}
             </div>
-            <button className="primary-button" disabled={submitting} onClick={handleContinue}>Continue</button>
           </div>
         )}
 
         {step.type === "transfer_ready" && (
-          <div className="stack">
-            <button className="primary-button" disabled={submitting} onClick={handleContinue}>Connect me now</button>
-          </div>
-        )}
-
-        {step.type === "connecting" && (
-          <div className="stack">
-            <div className="loading-skeleton">
-              <div className="loading-spinner" />
-              <div className="status-pill">Connecting your call...</div>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
+              <button className="chat-pill" disabled={submitting} onClick={handleTransfer}>Connect me now</button>
             </div>
           </div>
         )}
 
+        {step.type === "connecting" && (
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
+            <div className="status-pill">Connecting your call...</div>
+          </div>
+        )}
+
         {(step.type === "connected" || step.type === "fallback" || step.type === "callback_confirmation") && (
-          <div className="stack">
-            <div className="answer-preview">Lead: {leadId ?? "pending"}\nStatus: {step.type}</div>
-            <button className="primary-button" onClick={() => window.location.reload()}>Restart</button>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
+            <div className="answer-preview">Lead: {leadId ?? "pending"}{"\n"}Status: {step.type}</div>
+            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>Restart</button>
           </div>
         )}
       </div>
 
+      {/* Input bar */}
+      {step.type === "name" && (
+        <div className="chat-input-bar">
+          <div className="chat-name-row">
+            <input className="chat-name-input" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <input className="chat-name-input" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
+          <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
+            <button className={`chat-submit-btn ${hasName ? "active" : ""}`} disabled={!hasName || submitting} onClick={handleNameSubmit}>&#10003;</button>
+          </div>
+        </div>
+      )}
+
+      {(step.type === "short_text" || step.type === "phone" || step.type === "email") && (
+        <div className="chat-input-bar">
+          <div className="chat-input-row">
+            <input
+              className="chat-input-field"
+              type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"}
+              placeholder={step.placeholder ?? "Type here..."}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
+            />
+            <button className={`chat-submit-btn ${hasInput ? "active" : ""}`} disabled={!hasInput || submitting} onClick={handleTextSubmit}>&#9654;</button>
+          </div>
+        </div>
+      )}
+
+      {(step.type === "long_text" || step.type === "textarea_optional") && (
+        <div className="chat-input-bar">
+          <div className="chat-input-row">
+            <textarea
+              className="chat-input-field"
+              placeholder={step.placeholder ?? "Type here..."}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              rows={2}
+            />
+            <button
+              className={`chat-submit-btn ${hasInput ? "active" : ""}`}
+              disabled={!hasInput && step.type !== "textarea_optional"}
+              onClick={handleTextSubmit}
+            >&#9654;</button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
       <div className="widget-footer">
         {config.branding.privacyUrl ? <a href={config.branding.privacyUrl} target="_blank" rel="noreferrer">Privacy</a> : null}
         {config.branding.termsUrl ? <a href={config.branding.termsUrl} target="_blank" rel="noreferrer">Terms</a> : null}
+        <span style={{ marginLeft: "auto" }}>Powered by <strong>IntakeLLG</strong></span>
       </div>
     </div>
   );

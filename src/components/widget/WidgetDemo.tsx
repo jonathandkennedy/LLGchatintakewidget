@@ -1,12 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_FLOW } from "@/lib/widget/default-flow";
 import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
-const TOTAL_CONTENT_STEPS = 13;
+type ChatMessage = {
+  id: string;
+  role: "bot" | "user";
+  text: string;
+  timestamp: string;
+};
 
 function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): string | null {
   if (step.branches?.length) {
@@ -29,188 +34,252 @@ function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): str
       if (matches) return branch.nextStepKey;
     }
   }
-
   return step.next ?? null;
 }
 
-function getStepIndex(key: string): number {
-  const idx = DEFAULT_FLOW.steps.findIndex((s) => s.key === key);
-  return idx >= 0 ? idx : 0;
+function timeAgo() {
+  return "a few seconds ago";
 }
 
 export function WidgetDemo() {
   const [currentKey, setCurrentKey] = useState<string>(DEFAULT_FLOW.steps[0]?.key ?? "welcome");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [textValue, setTextValue] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
+  const threadRef = useRef<HTMLDivElement>(null);
+
   const step = useMemo(() => DEFAULT_FLOW.steps.find((item) => item.key === currentKey), [currentKey]);
 
-  const stepIndex = getStepIndex(currentKey);
-  const progress = Math.min((stepIndex / TOTAL_CONTENT_STEPS) * 100, 100);
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (threadRef.current) {
+      threadRef.current.scrollTop = threadRef.current.scrollHeight;
+    }
+  }, [messages, currentKey]);
 
-  if (!step) {
-    return <div className="widget-card"><div className="widget-body">Flow error: missing step.</div></div>;
+  // Add bot message when step changes
+  useEffect(() => {
+    if (!step) return;
+    const text = step.title + (step.description ? "\n" + step.description : "");
+    addBotMessage(text);
+  }, [currentKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function addBotMessage(text: string) {
+    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: timeAgo() }]);
   }
 
-  const goNext = (value?: unknown) => {
+  function addUserMessage(text: string) {
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: timeAgo() }]);
+  }
+
+  const goNext = (value?: unknown, displayText?: string) => {
+    if (displayText) addUserMessage(displayText);
+
     const nextAnswers = { ...answers };
-    if (step.fieldKey && value !== undefined) {
+    if (step?.fieldKey && value !== undefined) {
       nextAnswers[step.fieldKey] = value;
       setAnswers(nextAnswers);
     }
 
-    if (step.key === "full_name") {
+    if (step?.key === "full_name") {
       nextAnswers.first_name = firstName;
       nextAnswers.last_name = lastName;
       setAnswers(nextAnswers);
     }
 
-    setTextValue("");
-    const nextKey = getNextStepKey(step, nextAnswers);
+    setInputValue("");
+    setSelectedMulti([]);
+    const nextKey = step ? getNextStepKey(step, nextAnswers) : null;
     if (nextKey) setCurrentKey(nextKey);
   };
 
+  if (!step) {
+    return <div className="widget-card"><div className="chat-thread">Flow error: missing step.</div></div>;
+  }
+
+  const handleTextSubmit = () => {
+    if (!inputValue.trim()) return;
+    goNext(inputValue, inputValue);
+  };
+
+  const handleNameSubmit = () => {
+    if (!firstName.trim() || !lastName.trim()) return;
+    addUserMessage(`${firstName} ${lastName}`);
+    const nextAnswers = { ...answers, first_name: firstName, last_name: lastName };
+    setAnswers(nextAnswers);
+    setFirstName("");
+    setLastName("");
+    const nextKey = step ? getNextStepKey(step, nextAnswers) : null;
+    if (nextKey) setCurrentKey(nextKey);
+  };
+
+  const hasInput = inputValue.trim().length > 0;
+  const hasName = firstName.trim().length > 0 && lastName.trim().length > 0;
+
   return (
     <div className="widget-card">
-      <div className="widget-header">
-        <div className="eyebrow">Free Case Review</div>
-        <h2>{step.title}</h2>
-        {step.description ? <p>{step.description}</p> : null}
-        {step.type !== "welcome" && step.type !== "connected" && step.type !== "fallback" && step.type !== "callback_confirmation" && (
-          <div className="progress-bar">
-            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-          </div>
-        )}
+      {/* Toolbar */}
+      <div className="widget-toolbar">
+        <button className="widget-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
+        <button className="widget-toolbar-btn" title="Close">&times;</button>
       </div>
 
-      <div className="widget-body">
+      {/* Chat thread */}
+      <div className="chat-thread" ref={threadRef}>
+        {messages.map((msg) => (
+          <div key={msg.id} className={`chat-msg ${msg.role === "bot" ? "chat-msg-bot" : "chat-msg-user"}`}>
+            <div className={`chat-bubble ${msg.role === "bot" ? "chat-bubble-bot" : "chat-bubble-user"}`}>
+              {msg.text}
+            </div>
+            {msg.role === "bot" ? (
+              <div className="chat-avatar-row">
+                <div className="chat-avatar" />
+                <span className="chat-timestamp">{msg.timestamp}</span>
+              </div>
+            ) : (
+              <div className="chat-timestamp-right">{msg.timestamp}</div>
+            )}
+          </div>
+        ))}
+
+        {/* Interactive area for current step */}
         {step.type === "welcome" && (
-          <div className="stack">
-            <ul className="bullet-list">
-              <li>Free case review</li>
-              <li>Takes about 1 minute</li>
-              <li>Private and no obligation</li>
-            </ul>
-            <button className="primary-button" onClick={() => goNext()}>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
+            <button className="chat-pill" onClick={() => goNext(undefined, "Start intake")}>
               Start intake
             </button>
           </div>
         )}
 
         {(step.type === "single_select" || step.type === "date_range") && (
-          <div className="stack">
-            {step.options?.map((option) => (
-              <button key={option.key} className="option-card" onClick={() => goNext(option.key)}>
-                {option.label}
-              </button>
-            ))}
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
+              {step.options?.map((option) => (
+                <button key={option.key} className="chat-pill" onClick={() => goNext(option.key, option.label)}>
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {step.type === "multi_select" && (
-          <MultiSelectStep step={step} onContinue={(value) => goNext(value)} />
-        )}
-
-        {(step.type === "long_text" || step.type === "textarea_optional") && (
-          <div className="stack">
-            <textarea
-              className="text-input text-area"
-              value={textValue}
-              placeholder={step.placeholder}
-              onChange={(event) => setTextValue(event.target.value)}
-            />
-            <button className="primary-button" onClick={() => goNext(textValue)}>
-              Continue
-            </button>
-          </div>
-        )}
-
-        {step.type === "short_text" && (
-          <div className="stack">
-            <input className="text-input" value={textValue} placeholder={step.placeholder} onChange={(event) => setTextValue(event.target.value)} />
-            <button className="primary-button" onClick={() => goNext(textValue)}>
-              Continue
-            </button>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
+              {step.options?.map((option) => (
+                <button
+                  key={option.key}
+                  className={`chat-pill ${selectedMulti.includes(option.key) ? "selected" : ""}`}
+                  onClick={() => setSelectedMulti((c) => c.includes(option.key) ? c.filter((k) => k !== option.key) : [...c, option.key])}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {selectedMulti.length > 0 && (
+              <button className="chat-pill selected" style={{ marginTop: 8 }} onClick={() => goNext(selectedMulti, selectedMulti.join(", "))}>
+                Continue
+              </button>
+            )}
           </div>
         )}
 
         {step.type === "dropdown" && (
-          <div className="stack">
-            <select className="text-input" value={textValue} onChange={(event) => setTextValue(event.target.value)}>
-              <option value="">Select a state</option>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
               {STATE_OPTIONS.map((state) => (
-                <option key={state} value={state}>{state}</option>
+                <button key={state} className="chat-pill" onClick={() => goNext(state, state)}>
+                  {state}
+                </button>
               ))}
-            </select>
-            <button className="primary-button" onClick={() => goNext(textValue)}>
-              Continue
-            </button>
-          </div>
-        )}
-
-        {step.type === "name" && (
-          <div className="stack">
-            <div className="name-grid">
-              <input className="text-input" placeholder="First name" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
-              <input className="text-input" placeholder="Last name" value={lastName} onChange={(event) => setLastName(event.target.value)} />
             </div>
-            <button className="primary-button" onClick={() => goNext()}>
-              Continue
-            </button>
-          </div>
-        )}
-
-        {(step.type === "phone" || step.type === "email") && (
-          <div className="stack">
-            <input className="text-input" value={textValue} placeholder={step.type === "phone" ? "(555) 555-5555" : "you@example.com"} onChange={(event) => setTextValue(event.target.value)} />
-            <button className="primary-button" onClick={() => goNext(textValue)}>
-              Continue
-            </button>
           </div>
         )}
 
         {step.type === "transfer_ready" && (
-          <div className="stack">
-            <button className="primary-button" onClick={() => setCurrentKey("connecting")}>Connect me now</button>
-            <button className="secondary-button" onClick={() => setCurrentKey("callback_requested_confirmation")}>Prefer a callback instead?</button>
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <div className="chat-options">
+              <button className="chat-pill" onClick={() => { addUserMessage("Connect me now"); setCurrentKey("connecting"); }}>Connect me now</button>
+              <button className="chat-pill" onClick={() => { addUserMessage("Prefer a callback"); setCurrentKey("callback_requested_confirmation"); }}>Prefer a callback</button>
+            </div>
           </div>
         )}
 
         {step.type === "connecting" && (
-          <div className="stack">
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
             <div className="status-pill">Connecting...</div>
-            <button className="primary-button" onClick={() => setCurrentKey("connected")}>Simulate connected</button>
-            <button className="secondary-button" onClick={() => setCurrentKey("transfer_fallback")}>Simulate fallback</button>
+            <div className="chat-options" style={{ marginTop: 8 }}>
+              <button className="chat-pill" onClick={() => setCurrentKey("connected")}>Simulate connected</button>
+              <button className="chat-pill" onClick={() => setCurrentKey("transfer_fallback")}>Simulate fallback</button>
+            </div>
           </div>
         )}
 
         {(step.type === "connected" || step.type === "fallback" || step.type === "callback_confirmation") && (
-          <div className="stack">
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
             <pre className="answer-preview">{JSON.stringify(answers, null, 2)}</pre>
-            <button className="primary-button" onClick={() => window.location.reload()}>Restart demo</button>
+            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => window.location.reload()}>Restart demo</button>
           </div>
         )}
       </div>
-    </div>
-  );
-}
 
-function MultiSelectStep({ step, onContinue }: { step: WidgetStep; onContinue: (value: string[]) => void }) {
-  const [selected, setSelected] = useState<string[]>([]);
+      {/* Input bar */}
+      {step.type === "name" && (
+        <div className="chat-input-bar">
+          <div className="chat-name-row">
+            <input className="chat-name-input" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <input className="chat-name-input" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
+          <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
+            <button className={`chat-submit-btn ${hasName ? "active" : ""}`} disabled={!hasName} onClick={handleNameSubmit}>
+              &#10003;
+            </button>
+          </div>
+        </div>
+      )}
 
-  const toggle = (key: string) => {
-    setSelected((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
-  };
+      {(step.type === "short_text" || step.type === "phone" || step.type === "email") && (
+        <div className="chat-input-bar">
+          <div className="chat-input-row">
+            <input
+              className="chat-input-field"
+              type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"}
+              placeholder={step.placeholder ?? "Type here..."}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
+            />
+            <button className={`chat-submit-btn ${hasInput ? "active" : ""}`} disabled={!hasInput} onClick={handleTextSubmit}>
+              &#9654;
+            </button>
+          </div>
+        </div>
+      )}
 
-  return (
-    <div className="stack">
-      {step.options?.map((option) => (
-        <button key={option.key} className={`option-card ${selected.includes(option.key) ? "selected" : ""}`} onClick={() => toggle(option.key)}>
-          {option.label}
-        </button>
-      ))}
-      <button className="primary-button" onClick={() => onContinue(selected)}>Continue</button>
+      {(step.type === "long_text" || step.type === "textarea_optional") && (
+        <div className="chat-input-bar">
+          <div className="chat-input-row">
+            <textarea
+              className="chat-input-field"
+              placeholder={step.placeholder ?? "Type here..."}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              rows={2}
+            />
+            <button className={`chat-submit-btn ${hasInput ? "active" : ""}`} disabled={!hasInput && step.type !== "textarea_optional"} onClick={handleTextSubmit}>
+              &#9654;
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="widget-footer">
+        <span>Powered by <strong>IntakeLLG</strong></span>
+      </div>
     </div>
   );
 }
