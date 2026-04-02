@@ -2,6 +2,9 @@
   var currentScript = document.currentScript;
   var clientSlug = currentScript && currentScript.getAttribute("data-client-slug");
   var apiBase = (currentScript && currentScript.getAttribute("data-api-base")) || window.location.origin;
+  var position = (currentScript && currentScript.getAttribute("data-position")) || "right"; // "left" or "right"
+  var offsetX = parseInt((currentScript && currentScript.getAttribute("data-offset-x")) || "20", 10);
+  var offsetY = parseInt((currentScript && currentScript.getAttribute("data-offset-y")) || "20", 10);
   if (!clientSlug) {
     console.error("Missing data-client-slug on widget script");
     return;
@@ -64,9 +67,9 @@
       iframe.style.maxHeight = "100%";
       iframe.style.borderRadius = "0";
     } else {
-      iframe.style.bottom = "90px";
-      iframe.style.right = "20px";
-      iframe.style.left = "auto";
+      iframe.style.bottom = (offsetY + 70) + "px";
+      if (position === "left") { iframe.style.left = offsetX + "px"; iframe.style.right = "auto"; }
+      else { iframe.style.right = offsetX + "px"; iframe.style.left = "auto"; }
       iframe.style.top = "auto";
       iframe.style.width = "390px";
       iframe.style.maxWidth = "calc(100vw - 40px)";
@@ -113,8 +116,8 @@
     launcherBubble.innerText = headline;
     launcherBubble.style.cssText = [
       "position:fixed",
-      "bottom:80px",
-      "right:20px",
+      "bottom:" + (offsetY + 60) + "px",
+      (position === "left" ? "left:" : "right:") + offsetX + "px",
       "z-index:2147483647",
       "background:#fff",
       "color:#333",
@@ -136,8 +139,8 @@
     launcher.type = "button";
     launcher.style.cssText = [
       "position:fixed",
-      "bottom:16px",
-      "right:20px",
+      "bottom:" + offsetY + "px",
+      (position === "left" ? "left:" : "right:") + offsetX + "px",
       "z-index:2147483647",
       "width:56px",
       "height:56px",

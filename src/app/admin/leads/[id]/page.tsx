@@ -5,6 +5,7 @@ import { scoreLeadData, getScoreLabel } from "@/lib/scoring/lead-score";
 import { LeadNotes } from "@/components/admin/LeadNotes";
 import { LeadTimeline } from "@/components/admin/LeadTimeline";
 import { SessionReplay } from "@/components/admin/SessionReplay";
+import { LeadTags } from "@/components/admin/LeadTags";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,9 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
         <div className="eyebrow">Lead detail</div>
         <h1>{name}</h1>
         <p className="muted text-sm" style={{ marginTop: 4 }}>{lead.matter_type ?? "Unknown matter type"} &middot; {lead.phone_e164 ?? "No phone"}</p>
+        <div style={{ marginTop: 8 }}>
+          <LeadTags leadId={lead.id} />
+        </div>
 
         <form action={updateLeadStatusAction} className="stack" style={{ marginTop: 20 }}>
           <input type="hidden" name="leadId" value={lead.id} />

@@ -9,6 +9,7 @@ import { autoAssignLead } from "@/lib/routing/lead-assignment";
 import { checkDuplicate, flagDuplicate } from "@/lib/monitoring/duplicates";
 import { classifyAndStoreLead } from "@/lib/ai/classify";
 import { analyzeSentiment } from "@/lib/ai/sentiment";
+import { scheduleFollowUps } from "@/lib/scheduling/followup";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -199,6 +200,9 @@ export async function finalizeLeadFromSession(sessionId: string) {
     additionalNotes: lead.additional_notes,
     createdAt: lead.created_at,
   }).catch((err) => console.error("[email] Failed to send lead notification:", err));
+
+  // Schedule follow-ups (fire and forget)
+  scheduleFollowUps(lead.id, lead.client_id).catch((err) => console.error("[followup] Failed:", err));
 
   // Send SMS follow-up (fire and forget)
   sendLeadFollowUpSms({

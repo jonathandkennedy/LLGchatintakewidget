@@ -172,7 +172,8 @@ export function WidgetDemo() {
 
     // Show typing indicator, then add message after delay
     setTyping(true);
-    const delay = step.key === "welcome" ? 600 : 800 + Math.random() * 400;
+    const msgLength = (getStepTitle(lang, step.key) ?? step.title ?? "").length;
+    const delay = step.key === "welcome" ? 600 : Math.min(600 + msgLength * 15 + Math.random() * 300, 2000);
     const timer = setTimeout(() => {
       setTyping(false);
       const title = getStepTitle(lang, step.key) ?? step.title;
