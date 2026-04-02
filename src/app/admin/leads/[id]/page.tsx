@@ -4,6 +4,7 @@ import { updateLeadStatusAction } from "./statusAction";
 import { scoreLeadData, getScoreLabel } from "@/lib/scoring/lead-score";
 import { LeadNotes } from "@/components/admin/LeadNotes";
 import { LeadTimeline } from "@/components/admin/LeadTimeline";
+import { SessionReplay } from "@/components/admin/SessionReplay";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +121,13 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
           )}
         </section>
       )}
+
+      <section className="panel">
+        <h2>Session Replay</h2>
+        <div style={{ marginTop: 12 }}>
+          <SessionReplay answers={answers} sessionStarted={lead.created_at} />
+        </div>
+      </section>
 
       <section className="panel">
         <h2>Intake answers</h2>

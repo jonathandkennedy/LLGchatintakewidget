@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: "D" },
   { href: "/admin/leads", label: "Leads", icon: "L" },
   { href: "/admin/kanban", label: "Kanban", icon: "K" },
+  { href: "/admin/priority-queue", label: "Priority", icon: "!" },
+  { href: "/admin/search", label: "Search", icon: "S" },
   { href: "/admin/clients", label: "Clients", icon: "C" },
   { href: "/admin/analytics", label: "Analytics", icon: "A" },
   { href: "/admin/flow-editor", label: "Flow Editor", icon: "F" },
@@ -18,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/admin/webhooks", label: "Webhooks", icon: "W" },
   { href: "/admin/ab-testing", label: "A/B Tests", icon: "T" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "H" },
+  { href: "/admin/onboarding", label: "Setup Wizard", icon: "+" },
   { href: "/admin/email-templates", label: "Emails", icon: "E" },
   { href: "/admin/install", label: "Install", icon: "I" },
 ];

@@ -422,7 +422,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
   const hasName = firstName.trim().length > 0 && lastName.trim().length > 0;
 
   return (
-    <div className={`widget-card widget-runtime ${darkMode ? "dark" : ""}`}>
+    <div className={`widget-card widget-runtime ${darkMode ? "dark" : ""}`} role="dialog" aria-label="Intake chat widget">
       {/* Video/Image Header */}
       <div className="chat-video-header">
         {config.branding.welcomeVideoUrl ? (
@@ -461,7 +461,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
       </div>
 
       {/* Chat thread */}
-      <div className="chat-thread" ref={threadRef}>
+      <div className="chat-thread" ref={threadRef} role="log" aria-label="Chat messages" aria-live="polite">
         {error && <div className="error-banner">{error}</div>}
 
         {messages.map((msg) => (

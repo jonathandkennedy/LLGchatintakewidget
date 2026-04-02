@@ -1782,6 +1782,183 @@ h3 { font-size: 18px; }
 
 .admin-link { font-size: 14px; font-weight: 600; }
 
+/* === Onboarding Wizard === */
+
+.onboarding-progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.onboarding-step-indicator {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all var(--transition-fast);
+}
+
+.onboarding-step-indicator.active {
+  background: var(--primary-weak);
+  color: var(--primary);
+}
+
+.onboarding-step-indicator.done {
+  background: var(--success-weak);
+  color: var(--success);
+}
+
+.onboarding-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.onboarding-step-indicator.active .onboarding-step-num {
+  background: var(--primary);
+  color: #fff;
+}
+
+.onboarding-step-indicator.done .onboarding-step-num {
+  background: var(--success);
+  color: #fff;
+}
+
+/* === Priority Queue === */
+
+.priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.priority-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.priority-item:hover { border-color: var(--primary); background: var(--primary-weak); }
+
+.priority-item.urgent {
+  border-left: 3px solid var(--error);
+}
+
+.priority-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--border-light);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.priority-info { flex: 1; }
+
+.priority-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.priority-actions { flex-shrink: 0; }
+
+/* === Session Replay === */
+
+.replay-container {
+  font-size: 13px;
+}
+
+.replay-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.replay-steps {
+  display: flex;
+  flex-direction: column;
+}
+
+.replay-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.replay-step-time {
+  width: 70px;
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.replay-elapsed {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.replay-duration {
+  font-size: 10px;
+  color: var(--muted-light);
+}
+
+.replay-duration.slow {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.replay-step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.replay-step-content { flex: 1; }
+
+.replay-step-label {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.replay-step-value {
+  color: var(--muted);
+  word-break: break-word;
+}
+
 /* === Kanban Board === */
 
 .kanban-board {

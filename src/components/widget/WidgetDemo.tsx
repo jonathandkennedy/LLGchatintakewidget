@@ -321,7 +321,7 @@ export function WidgetDemo() {
   const showInputBar = showTextInput || showTextarea || step.type === "name";
 
   return (
-    <div className={`widget-card ${darkMode ? "dark" : ""}`}>
+    <div className={`widget-card ${darkMode ? "dark" : ""}`} role="dialog" aria-label="Intake chat widget">
       {/* Video/Image Header */}
       <div className="chat-video-header">
         {WELCOME_VIDEO_URL ? (
@@ -361,7 +361,7 @@ export function WidgetDemo() {
       </div>
 
       {/* Chat thread */}
-      <div className="chat-thread" ref={threadRef}>
+      <div className="chat-thread" ref={threadRef} role="log" aria-label="Chat messages" aria-live="polite">
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-msg ${msg.role === "bot" ? "chat-msg-bot" : "chat-msg-user"}`}>
             {msg.role === "user" && (
