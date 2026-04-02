@@ -20,6 +20,12 @@ type ConnectResponse = { ok: boolean; status: string; reason?: string };
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
+function getStepIndex(config: WidgetPublicConfig | null, key: string): number {
+  if (!config) return 0;
+  const idx = config.flow.steps.findIndex((s) => s.key === key);
+  return idx >= 0 ? idx : 0;
+}
+
 export function WidgetRuntime({ clientSlug }: Props) {
   const [config, setConfig] = useState<WidgetPublicConfig | null>(null);
   const [currentKey, setCurrentKey] = useState<string>("welcome");
@@ -49,6 +55,12 @@ export function WidgetRuntime({ clientSlug }: Props) {
   }, [clientSlug]);
 
   const step = useMemo(() => config?.flow.steps.find((item) => item.key === currentKey), [config, currentKey]);
+
+  const totalSteps = config ? config.flow.steps.filter((s) =>
+    !["connecting", "connected", "fallback", "callback_confirmation", "transfer_fallback"].includes(s.type)
+  ).length : 1;
+  const stepIndex = getStepIndex(config, currentKey);
+  const progress = Math.min((stepIndex / totalSteps) * 100, 100);
 
   useEffect(() => {
     setInputValue("");
@@ -181,8 +193,22 @@ export function WidgetRuntime({ clientSlug }: Props) {
     }
   }
 
-  if (loading) return <div className="widget-card"><div className="widget-body">Loading widget…</div></div>;
+  if (loading) {
+    return (
+      <div className="widget-card">
+        <div className="widget-body">
+          <div className="loading-skeleton">
+            <div className="loading-spinner" />
+            <div className="loading-text">Loading widget...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!config || !step) return <div className="widget-card"><div className="widget-body">Widget unavailable.</div></div>;
+
+  const showProgress = step.type !== "welcome" && step.type !== "connected" && step.type !== "fallback" && step.type !== "callback_confirmation" && step.type !== "connecting";
 
   return (
     <div className="widget-card widget-runtime" style={{ ["--widget-primary" as string]: config.branding.primaryColor }}>
@@ -190,6 +216,11 @@ export function WidgetRuntime({ clientSlug }: Props) {
         <div className="eyebrow">{config.branding.widgetTitle}</div>
         <h2>{step.type === "welcome" ? config.branding.welcomeHeadline : step.title}</h2>
         <p>{step.type === "welcome" ? config.branding.welcomeBody : (step.description ?? step.helperText ?? "")}</p>
+        {showProgress && (
+          <div className="progress-bar">
+            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+        )}
       </div>
 
       <div className="widget-body">
@@ -272,7 +303,14 @@ export function WidgetRuntime({ clientSlug }: Props) {
           </div>
         )}
 
-        {step.type === "connecting" && <div className="status-pill">Connecting your call…</div>}
+        {step.type === "connecting" && (
+          <div className="stack">
+            <div className="loading-skeleton">
+              <div className="loading-spinner" />
+              <div className="status-pill">Connecting your call...</div>
+            </div>
+          </div>
+        )}
 
         {(step.type === "connected" || step.type === "fallback" || step.type === "callback_confirmation") && (
           <div className="stack">

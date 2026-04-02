@@ -6,6 +6,8 @@ import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
+const TOTAL_CONTENT_STEPS = 13;
+
 function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): string | null {
   if (step.branches?.length) {
     for (const branch of [...step.branches].sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100))) {
@@ -31,6 +33,11 @@ function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): str
   return step.next ?? null;
 }
 
+function getStepIndex(key: string): number {
+  const idx = DEFAULT_FLOW.steps.findIndex((s) => s.key === key);
+  return idx >= 0 ? idx : 0;
+}
+
 export function WidgetDemo() {
   const [currentKey, setCurrentKey] = useState<string>(DEFAULT_FLOW.steps[0]?.key ?? "welcome");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -39,8 +46,11 @@ export function WidgetDemo() {
   const [lastName, setLastName] = useState("");
   const step = useMemo(() => DEFAULT_FLOW.steps.find((item) => item.key === currentKey), [currentKey]);
 
+  const stepIndex = getStepIndex(currentKey);
+  const progress = Math.min((stepIndex / TOTAL_CONTENT_STEPS) * 100, 100);
+
   if (!step) {
-    return <div className="widget-card">Flow error: missing step.</div>;
+    return <div className="widget-card"><div className="widget-body">Flow error: missing step.</div></div>;
   }
 
   const goNext = (value?: unknown) => {
@@ -56,6 +66,7 @@ export function WidgetDemo() {
       setAnswers(nextAnswers);
     }
 
+    setTextValue("");
     const nextKey = getNextStepKey(step, nextAnswers);
     if (nextKey) setCurrentKey(nextKey);
   };
@@ -63,11 +74,14 @@ export function WidgetDemo() {
   return (
     <div className="widget-card">
       <div className="widget-header">
-        <div>
-          <div className="eyebrow">Free Case Review</div>
-          <h2>{step.title}</h2>
-          {step.description ? <p>{step.description}</p> : null}
-        </div>
+        <div className="eyebrow">Free Case Review</div>
+        <h2>{step.title}</h2>
+        {step.description ? <p>{step.description}</p> : null}
+        {step.type !== "welcome" && step.type !== "connected" && step.type !== "fallback" && step.type !== "callback_confirmation" && (
+          <div className="progress-bar">
+            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+        )}
       </div>
 
       <div className="widget-body">

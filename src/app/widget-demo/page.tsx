@@ -7,7 +7,7 @@ export default function WidgetDemoPage() {
         <section className="panel">
           <div className="eyebrow">Widget prototype</div>
           <h1>Guided intake widget demo</h1>
-          <p className="muted">This is a local visual demo of the default screen flow. It does not require Supabase or Telnyx to render.</p>
+          <p className="muted" style={{ marginTop: 8 }}>This is a local visual demo of the default screen flow. It does not require Supabase or Telnyx to render.</p>
         </section>
         <section>
           <WidgetDemo />

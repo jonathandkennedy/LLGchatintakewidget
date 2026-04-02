@@ -39,11 +39,11 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
       <section className="panel">
         <div className="eyebrow">Lead detail</div>
         <h1>{name}</h1>
-        <p className="muted">{lead.matter_type ?? "Unknown matter type"} · {lead.phone_e164 ?? "No phone"}</p>
+        <p className="muted text-sm" style={{ marginTop: 4 }}>{lead.matter_type ?? "Unknown matter type"} &middot; {lead.phone_e164 ?? "No phone"}</p>
 
-        <form action={updateLeadStatusAction} className="stack" style={{ marginTop: 16 }}>
+        <form action={updateLeadStatusAction} className="stack" style={{ marginTop: 20 }}>
           <input type="hidden" name="leadId" value={lead.id} />
-          <label className="muted">Lead status</label>
+          <label className="muted text-sm" style={{ fontWeight: 500 }}>Lead status</label>
           <select className="text-input" name="status" defaultValue={lead.status}>
             <option value="started">started</option>
             <option value="intake_completed">intake_completed</option>
@@ -57,15 +57,15 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
         </form>
 
         <div className="kpi-grid">
-          <div className="kpi-card"><div className="muted">Created</div><strong>{new Date(lead.created_at).toLocaleString()}</strong></div>
-          <div className="kpi-card"><div className="muted">Current status</div><strong>{lead.status}</strong></div>
-          <div className="kpi-card"><div className="muted">Email</div><strong>{lead.email ?? "—"}</strong></div>
+          <div className="kpi-card"><div className="muted text-sm">Created</div><strong>{new Date(lead.created_at).toLocaleString()}</strong></div>
+          <div className="kpi-card"><div className="muted text-sm">Current status</div><strong>{lead.status}</strong></div>
+          <div className="kpi-card"><div className="muted text-sm">Email</div><strong>{lead.email ?? "\u2014"}</strong></div>
         </div>
       </section>
 
       <section className="panel">
         <h2>Intake answers</h2>
-        <table className="table">
+        <table className="table" style={{ marginTop: 16 }}>
           <thead><tr><th>Field</th><th>Value</th></tr></thead>
           <tbody>
             {answers.map((answer) => (
@@ -80,7 +80,7 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
 
       <section className="panel">
         <h2>Call attempts</h2>
-        <table className="table">
+        <table className="table" style={{ marginTop: 16 }}>
           <thead><tr><th>Status</th><th>Destination</th><th>Started</th><th>Reason</th></tr></thead>
           <tbody>
             {calls.map((call) => (
@@ -88,7 +88,7 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
                 <td>{call.status}</td>
                 <td>{call.destination_number_e164}</td>
                 <td>{new Date(call.started_at).toLocaleString()}</td>
-                <td>{call.failure_reason ?? "—"}</td>
+                <td>{call.failure_reason ?? "\u2014"}</td>
               </tr>
             ))}
           </tbody>
@@ -97,7 +97,7 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
 
       <section className="panel">
         <h2>SMS messages</h2>
-        <table className="table">
+        <table className="table" style={{ marginTop: 16 }}>
           <thead><tr><th>Direction</th><th>Status</th><th>To</th><th>Message</th></tr></thead>
           <tbody>
             {sms.map((message) => (
@@ -110,7 +110,7 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
             ))}
           </tbody>
         </table>
-        <div style={{ marginTop: 16 }}><Link href="/admin/leads">Back to leads</Link></div>
+        <div style={{ marginTop: 20 }}><Link href="/admin/leads">Back to leads</Link></div>
       </section>
     </main>
   );

@@ -30,7 +30,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: S
       <section className="panel">
         <div className="eyebrow">Admin inbox</div>
         <h1>Leads</h1>
-        <p className="muted">Filter recent leads, open a detail page, and update statuses.</p>
+        <p className="muted text-sm" style={{ marginTop: 4 }}>Filter recent leads, open a detail page, and update statuses.</p>
 
         <form className="filter-grid" action="/admin/leads">
           <input className="text-input" type="text" name="q" defaultValue={searchParams.q ?? ""} placeholder="Search name or phone" />
@@ -60,14 +60,14 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: S
           <tbody>
             {leads.map((lead) => {
               const name = [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "Unknown lead";
-              const location = [lead.incident_city, lead.incident_state].filter(Boolean).join(", ") || "—";
+              const location = [lead.incident_city, lead.incident_state].filter(Boolean).join(", ") || "\u2014";
               return (
                 <tr key={lead.id}>
                   <td><Link href={`/admin/leads/${lead.id}`}>{name}</Link></td>
-                  <td>{lead.matter_type ?? "—"}</td>
+                  <td>{lead.matter_type ?? "\u2014"}</td>
                   <td><span className="status-chip">{lead.status}</span></td>
                   <td>{location}</td>
-                  <td>{lead.phone_e164 ?? "—"}</td>
+                  <td>{lead.phone_e164 ?? "\u2014"}</td>
                   <td>{new Date(lead.created_at).toLocaleString()}</td>
                 </tr>
               );
