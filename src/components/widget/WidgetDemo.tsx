@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { DEFAULT_FLOW } from "@/lib/widget/default-flow";
 import type { WidgetStep } from "@/types/widget";
 
@@ -11,6 +11,7 @@ type ChatMessage = {
   role: "bot" | "user";
   text: string;
   timestamp: string;
+  stepKey?: string;
 };
 
 function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): string | null {
@@ -19,16 +20,11 @@ function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): str
       const matches = branch.conditions.every((condition) => {
         const currentValue = answers[condition.fieldKey];
         switch (condition.operator) {
-          case "eq":
-            return currentValue === condition.value;
-          case "in":
-            return Array.isArray(condition.value) && condition.value.includes(String(currentValue));
-          case "is_truthy":
-            return Boolean(currentValue);
-          case "is_falsy":
-            return !currentValue;
-          default:
-            return false;
+          case "eq": return currentValue === condition.value;
+          case "in": return Array.isArray(condition.value) && condition.value.includes(String(currentValue));
+          case "is_truthy": return Boolean(currentValue);
+          case "is_falsy": return !currentValue;
+          default: return false;
         }
       });
       if (matches) return branch.nextStepKey;
@@ -37,8 +33,40 @@ function getNextStepKey(step: WidgetStep, answers: Record<string, unknown>): str
   return step.next ?? null;
 }
 
-function timeAgo() {
-  return "a few seconds ago";
+function timeAgo() { return "a few seconds ago"; }
+
+/* SVG Icons */
+function SendIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function UndoIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
 }
 
 export function WidgetDemo() {
@@ -49,41 +77,56 @@ export function WidgetDemo() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
+  const [inputMode, setInputMode] = useState<"text" | "voice" | "video">("text");
   const threadRef = useRef<HTMLDivElement>(null);
 
   const step = useMemo(() => DEFAULT_FLOW.steps.find((item) => item.key === currentKey), [currentKey]);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     if (threadRef.current) {
-      threadRef.current.scrollTop = threadRef.current.scrollHeight;
+      setTimeout(() => {
+        threadRef.current!.scrollTop = threadRef.current!.scrollHeight;
+      }, 50);
     }
-  }, [messages, currentKey]);
+  }, []);
 
-  // Add bot message when step changes
+  useEffect(() => { scrollToBottom(); }, [messages, currentKey, scrollToBottom]);
+
   useEffect(() => {
     if (!step) return;
     const text = step.title + (step.description ? "\n" + step.description : "");
-    addBotMessage(text);
+    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: timeAgo(), stepKey: step.key }]);
   }, [currentKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function addBotMessage(text: string) {
-    setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, role: "bot", text, timestamp: timeAgo() }]);
+  function addUserMessage(text: string, stepKey?: string) {
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: timeAgo(), stepKey }]);
   }
 
-  function addUserMessage(text: string) {
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text, timestamp: timeAgo() }]);
+  function handleUndo(msg: ChatMessage) {
+    if (!msg.stepKey) return;
+    // Remove this message and all after it, revert to the step
+    const idx = messages.findIndex((m) => m.id === msg.id);
+    if (idx < 0) return;
+    setMessages((prev) => prev.slice(0, idx));
+    // Remove answer
+    if (step?.fieldKey) {
+      setAnswers((prev) => {
+        const next = { ...prev };
+        delete next[step.fieldKey!];
+        return next;
+      });
+    }
+    setCurrentKey(msg.stepKey);
   }
 
   const goNext = (value?: unknown, displayText?: string) => {
-    if (displayText) addUserMessage(displayText);
+    if (displayText && step) addUserMessage(displayText, step.key);
 
     const nextAnswers = { ...answers };
     if (step?.fieldKey && value !== undefined) {
       nextAnswers[step.fieldKey] = value;
       setAnswers(nextAnswers);
     }
-
     if (step?.key === "full_name") {
       nextAnswers.first_name = firstName;
       nextAnswers.last_name = lastName;
@@ -92,6 +135,8 @@ export function WidgetDemo() {
 
     setInputValue("");
     setSelectedMulti([]);
+    setFirstName("");
+    setLastName("");
     const nextKey = step ? getNextStepKey(step, nextAnswers) : null;
     if (nextKey) setCurrentKey(nextKey);
   };
@@ -107,7 +152,7 @@ export function WidgetDemo() {
 
   const handleNameSubmit = () => {
     if (!firstName.trim() || !lastName.trim()) return;
-    addUserMessage(`${firstName} ${lastName}`);
+    addUserMessage(`${firstName} ${lastName}`, step?.key);
     const nextAnswers = { ...answers, first_name: firstName, last_name: lastName };
     setAnswers(nextAnswers);
     setFirstName("");
@@ -119,18 +164,33 @@ export function WidgetDemo() {
   const hasInput = inputValue.trim().length > 0;
   const hasName = firstName.trim().length > 0 && lastName.trim().length > 0;
 
+  const showTextInput = step.type === "short_text" || step.type === "phone" || step.type === "email";
+  const showTextarea = step.type === "long_text" || step.type === "textarea_optional";
+  const showInputBar = showTextInput || showTextarea || step.type === "name";
+
   return (
     <div className="widget-card">
-      {/* Toolbar */}
-      <div className="widget-toolbar">
-        <button className="widget-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
-        <button className="widget-toolbar-btn" title="Close">&times;</button>
+      {/* Video/Image Header */}
+      <div className="chat-video-header">
+        <div className="chat-video-placeholder">
+          <div className="chat-video-avatar-lg" />
+        </div>
+        <div className="chat-toolbar-overlay">
+          <button className="chat-toolbar-btn" title="Restart" onClick={() => window.location.reload()}>&#8634;</button>
+          <button className="chat-toolbar-btn" title="Close">&times;</button>
+        </div>
       </div>
 
       {/* Chat thread */}
       <div className="chat-thread" ref={threadRef}>
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-msg ${msg.role === "bot" ? "chat-msg-bot" : "chat-msg-user"}`}>
+            {msg.role === "user" && (
+              <div className="chat-user-actions">
+                <button className="chat-action-btn" title="Undo" onClick={() => handleUndo(msg)}><UndoIcon /></button>
+                <button className="chat-action-btn" title="Edit"><EditIcon /></button>
+              </div>
+            )}
             <div className={`chat-bubble ${msg.role === "bot" ? "chat-bubble-bot" : "chat-bubble-user"}`}>
               {msg.text}
             </div>
@@ -145,22 +205,26 @@ export function WidgetDemo() {
           </div>
         ))}
 
-        {/* Interactive area for current step */}
+        {/* Privacy notice after first answer */}
+        {messages.filter((m) => m.role === "user").length === 1 && (
+          <div className="chat-privacy">
+            This transcript will be recorded. We respect your privacy.{" "}
+            <a href="#" onClick={(e) => e.preventDefault()}>Privacy Policy</a>
+          </div>
+        )}
+
+        {/* Interactive options */}
         {step.type === "welcome" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
-            <button className="chat-pill" onClick={() => goNext(undefined, "Start intake")}>
-              Start intake
-            </button>
+            <button className="chat-pill" onClick={() => goNext(undefined, "Start intake")}>Start intake</button>
           </div>
         )}
 
         {(step.type === "single_select" || step.type === "date_range") && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              {step.options?.map((option) => (
-                <button key={option.key} className="chat-pill" onClick={() => goNext(option.key, option.label)}>
-                  {option.label}
-                </button>
+              {step.options?.map((opt) => (
+                <button key={opt.key} className="chat-pill" onClick={() => goNext(opt.key, opt.label)}>{opt.label}</button>
               ))}
             </div>
           </div>
@@ -169,20 +233,16 @@ export function WidgetDemo() {
         {step.type === "multi_select" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              {step.options?.map((option) => (
+              {step.options?.map((opt) => (
                 <button
-                  key={option.key}
-                  className={`chat-pill ${selectedMulti.includes(option.key) ? "selected" : ""}`}
-                  onClick={() => setSelectedMulti((c) => c.includes(option.key) ? c.filter((k) => k !== option.key) : [...c, option.key])}
-                >
-                  {option.label}
-                </button>
+                  key={opt.key}
+                  className={`chat-pill ${selectedMulti.includes(opt.key) ? "selected" : ""}`}
+                  onClick={() => setSelectedMulti((c) => c.includes(opt.key) ? c.filter((k) => k !== opt.key) : [...c, opt.key])}
+                >{opt.label}</button>
               ))}
             </div>
             {selectedMulti.length > 0 && (
-              <button className="chat-pill selected" style={{ marginTop: 8 }} onClick={() => goNext(selectedMulti, selectedMulti.join(", "))}>
-                Continue
-              </button>
+              <button className="chat-pill selected" style={{ marginTop: 8 }} onClick={() => goNext(selectedMulti, selectedMulti.join(", "))}>Continue</button>
             )}
           </div>
         )}
@@ -190,10 +250,8 @@ export function WidgetDemo() {
         {step.type === "dropdown" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              {STATE_OPTIONS.map((state) => (
-                <button key={state} className="chat-pill" onClick={() => goNext(state, state)}>
-                  {state}
-                </button>
+              {STATE_OPTIONS.map((st) => (
+                <button key={st} className="chat-pill" onClick={() => goNext(st, st)}>{st}</button>
               ))}
             </div>
           </div>
@@ -202,8 +260,8 @@ export function WidgetDemo() {
         {step.type === "transfer_ready" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
             <div className="chat-options">
-              <button className="chat-pill" onClick={() => { addUserMessage("Connect me now"); setCurrentKey("connecting"); }}>Connect me now</button>
-              <button className="chat-pill" onClick={() => { addUserMessage("Prefer a callback"); setCurrentKey("callback_requested_confirmation"); }}>Prefer a callback</button>
+              <button className="chat-pill" onClick={() => { addUserMessage("Connect me now", step.key); setCurrentKey("connecting"); }}>Connect me now</button>
+              <button className="chat-pill" onClick={() => { addUserMessage("Prefer a callback", step.key); setCurrentKey("callback_requested_confirmation"); }}>Prefer a callback</button>
             </div>
           </div>
         )}
@@ -230,20 +288,18 @@ export function WidgetDemo() {
       {step.type === "name" && (
         <div className="chat-input-bar">
           <div className="chat-name-row">
-            <input className="chat-name-input" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            <input className="chat-name-input" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <input className="chat-name-input" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()} />
+            <input className="chat-name-input" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()} />
           </div>
-          <div style={{ marginTop: 8, display: "flex", justifyContent: "center" }}>
-            <button className={`chat-submit-btn ${hasName ? "active" : ""}`} disabled={!hasName} onClick={handleNameSubmit}>
-              &#10003;
-            </button>
-          </div>
+          <button className={`chat-submit-bar-btn ${hasName ? "active" : ""}`} disabled={!hasName} onClick={handleNameSubmit}>
+            <CheckIcon />
+          </button>
         </div>
       )}
 
-      {(step.type === "short_text" || step.type === "phone" || step.type === "email") && (
+      {showTextInput && (
         <div className="chat-input-bar">
-          <div className="chat-input-row">
+          <div className="chat-input-underline">
             <input
               className="chat-input-field"
               type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"}
@@ -252,16 +308,30 @@ export function WidgetDemo() {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
             />
-            <button className={`chat-submit-btn ${hasInput ? "active" : ""}`} disabled={!hasInput} onClick={handleTextSubmit}>
-              &#9654;
+          </div>
+          {/* Input mode toolbar */}
+          <div className="chat-input-toolbar">
+            <div className="chat-input-modes">
+              <button className={`chat-mode-btn ${inputMode === "text" ? "active" : ""}`} onClick={() => setInputMode("text")} title="Text">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+              </button>
+              <button className={`chat-mode-btn ${inputMode === "voice" ? "active" : ""}`} onClick={() => setInputMode("voice")} title="Voice">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <button className={`chat-mode-btn ${inputMode === "video" ? "active" : ""}`} onClick={() => setInputMode("video")} title="Video">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              </button>
+            </div>
+            <button className={`chat-send-btn ${hasInput ? "active" : ""}`} disabled={!hasInput} onClick={handleTextSubmit}>
+              <SendIcon />
             </button>
           </div>
         </div>
       )}
 
-      {(step.type === "long_text" || step.type === "textarea_optional") && (
+      {showTextarea && (
         <div className="chat-input-bar">
-          <div className="chat-input-row">
+          <div className="chat-input-underline">
             <textarea
               className="chat-input-field"
               placeholder={step.placeholder ?? "Type here..."}
@@ -269,8 +339,21 @@ export function WidgetDemo() {
               onChange={(e) => setInputValue(e.target.value)}
               rows={2}
             />
-            <button className={`chat-submit-btn ${hasInput ? "active" : ""}`} disabled={!hasInput && step.type !== "textarea_optional"} onClick={handleTextSubmit}>
-              &#9654;
+          </div>
+          <div className="chat-input-toolbar">
+            <div className="chat-input-modes">
+              <button className={`chat-mode-btn ${inputMode === "text" ? "active" : ""}`} onClick={() => setInputMode("text")} title="Text">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+              </button>
+              <button className={`chat-mode-btn ${inputMode === "voice" ? "active" : ""}`} onClick={() => setInputMode("voice")} title="Voice">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <button className={`chat-mode-btn ${inputMode === "video" ? "active" : ""}`} onClick={() => setInputMode("video")} title="Video">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              </button>
+            </div>
+            <button className={`chat-send-btn ${hasInput ? "active" : ""}`} disabled={!hasInput && step.type !== "textarea_optional"} onClick={handleTextSubmit}>
+              <SendIcon />
             </button>
           </div>
         </div>
