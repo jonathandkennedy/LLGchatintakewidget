@@ -57,7 +57,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: S
 
       {clients.length > 1 && (
         <form action="" style={{ marginBottom: 16 }}>
-          <select className="text-input" name="clientId" defaultValue={searchParams.clientId ?? ""} style={{ maxWidth: 280 }} onChange="this.form.submit()">
+          <select className="text-input" name="clientId" defaultValue={searchParams.clientId ?? ""} style={{ maxWidth: 280 }}>
             <option value="">All clients</option>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
