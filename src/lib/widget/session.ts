@@ -7,6 +7,7 @@ import { getActiveTest, selectVariant, recordVariantAssignment, recordVariantCon
 import { fireLeadCreatedWebhook } from "@/lib/integrations/webhooks";
 import { autoAssignLead } from "@/lib/routing/lead-assignment";
 import { checkDuplicate, flagDuplicate } from "@/lib/monitoring/duplicates";
+import { classifyAndStoreLead } from "@/lib/ai/classify";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -147,6 +148,12 @@ export async function finalizeLeadFromSession(sessionId: string) {
       flagDuplicate(lead.id, dup.matchedLeadId, dup.matchType);
     }
   }).catch((err) => console.error("[duplicate] Check failed:", err));
+
+  // AI classification (fire and forget)
+  if (lead.incident_summary) {
+    classifyAndStoreLead(lead.id, lead.incident_summary, lead.matter_type)
+      .catch((err) => console.error("[ai] Classification failed:", err));
+  }
 
   // Auto-assign lead to team member (fire and forget)
   autoAssignLead({

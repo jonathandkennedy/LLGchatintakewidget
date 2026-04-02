@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAdminPassword, createSession, setSessionCookie, clearSessionCookie } from "@/lib/auth/admin-auth";
+import { logAudit } from "@/lib/monitoring/audit";
 import {
   isEmailAuthorized,
   generateMagicLinkToken,
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
       }
       const token = createSession();
       setSessionCookie(token);
+      logAudit({ action: "admin.login", actor: "password" });
       return NextResponse.json({ ok: true });
     }
 
@@ -93,6 +95,7 @@ export async function POST(request: Request) {
 
     // Logout
     if (body.action === "logout") {
+      logAudit({ action: "admin.logout" });
       clearSessionCookie();
       return NextResponse.json({ ok: true });
     }

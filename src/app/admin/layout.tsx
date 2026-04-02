@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/admin/routing", label: "Routing", icon: "R" },
   { href: "/admin/branding", label: "Branding", icon: "B" },
   { href: "/admin/ab-testing", label: "A/B Tests", icon: "T" },
+  { href: "/admin/audit-log", label: "Audit Log", icon: "H" },
   { href: "/admin/install", label: "Install", icon: "I" },
 ];
 

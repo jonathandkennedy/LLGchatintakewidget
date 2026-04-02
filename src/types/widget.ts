@@ -10,6 +10,8 @@ export type StepType =
   | "dropdown"
   | "date_range"
   | "textarea_optional"
+  | "file_upload"
+  | "appointment"
   | "transfer_ready"
   | "connecting"
   | "connected"

@@ -308,6 +308,16 @@ export function WidgetDemo() {
 
   const showTextInput = step.type === "short_text" || step.type === "phone" || step.type === "email";
   const showTextarea = step.type === "long_text" || step.type === "textarea_optional";
+
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Demo mode: just show the file name as the answer
+    goNext(file.name, `Uploaded: ${file.name}`);
+  };
   const showInputBar = showTextInput || showTextarea || step.type === "name";
 
   return (
@@ -441,6 +451,53 @@ export function WidgetDemo() {
                 <button key={st} className="chat-pill" onClick={() => goNext(st, st)}>{st}</button>
               ))}
             </div>
+          </div>
+        )}
+
+        {step.type === "appointment" && (() => {
+          const today = new Date();
+          const dates = Array.from({ length: 5 }, (_, i) => {
+            const d = new Date(today);
+            d.setDate(d.getDate() + i + 1);
+            return { key: d.toISOString().slice(0, 10), label: d.toLocaleDateString(lang === "es" ? "es" : "en", { weekday: "short", month: "short", day: "numeric" }) };
+          });
+          const times = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM"];
+          return (
+            <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+              <div className="appointment-picker">
+                <div className="appointment-date-row">
+                  {dates.map((d) => (
+                    <button key={d.key} className={`appointment-date-btn ${selectedDate === d.key ? "selected" : ""}`} onClick={() => setSelectedDate(d.key)}>{d.label}</button>
+                  ))}
+                </div>
+                {selectedDate && (
+                  <div className="appointment-time-grid">
+                    {times.map((t) => (
+                      <button key={t} className={`appointment-time-btn ${selectedTime === t ? "selected" : ""}`} onClick={() => setSelectedTime(t)}>{t}</button>
+                    ))}
+                  </div>
+                )}
+                {selectedDate && selectedTime && (
+                  <button className="chat-pill selected" onClick={() => { goNext(`${selectedDate} ${selectedTime}`, `${selectedDate} at ${selectedTime}`); setSelectedDate(""); setSelectedTime(""); }}>
+                    {lang === "es" ? "Confirmar cita" : "Confirm appointment"}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {step.type === "file_upload" && (
+          <div className="chat-msg chat-msg-bot" style={{ marginTop: 4 }}>
+            <label className="file-upload-area">
+              <input type="file" accept="image/*,.pdf" onChange={handleFileSelect} style={{ display: "none" }} />
+              <div className="file-upload-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div className="file-upload-text"><strong>Tap to upload</strong> a photo or document</div>
+              <div className="file-upload-hint">JPEG, PNG, WebP, HEIC, PDF up to 10MB</div>
+            </label>
+            <button className="chat-pill" style={{ marginTop: 8 }} onClick={() => goNext("skipped", "Skipped upload")}>Skip</button>
           </div>
         )}
 

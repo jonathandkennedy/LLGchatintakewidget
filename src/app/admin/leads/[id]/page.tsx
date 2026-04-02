@@ -66,6 +66,42 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
 
       <LeadScoreCard lead={lead} />
 
+      {lead.ai_summary && (
+        <section className="panel">
+          <h2>AI Analysis</h2>
+          <div className="kpi-grid" style={{ marginTop: 12 }}>
+            <div className="kpi-card">
+              <div className="muted text-sm">Severity</div>
+              <strong><span className={`score-badge score-${lead.ai_severity === "critical" ? "hot" : lead.ai_severity === "high" ? "warm" : lead.ai_severity === "medium" ? "medium" : "cool"}`}>{lead.ai_severity}</span></strong>
+            </div>
+            <div className="kpi-card">
+              <div className="muted text-sm">Urgency</div>
+              <strong>{lead.ai_urgency}</strong>
+            </div>
+            <div className="kpi-card">
+              <div className="muted text-sm">AI Summary</div>
+              <strong style={{ fontSize: 13, fontWeight: 500 }}>{lead.ai_summary}</strong>
+            </div>
+          </div>
+          {lead.ai_key_facts && lead.ai_key_facts.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div className="muted text-sm" style={{ marginBottom: 6, fontWeight: 600 }}>Key Facts</div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.7 }}>
+                {(lead.ai_key_facts as string[]).map((f: string, i: number) => <li key={i}>{f}</li>)}
+              </ul>
+            </div>
+          )}
+          {lead.ai_liability_indicators && lead.ai_liability_indicators.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div className="muted text-sm" style={{ marginBottom: 6, fontWeight: 600 }}>Liability Indicators</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {(lead.ai_liability_indicators as string[]).map((ind: string, i: number) => <span key={i} className="status-chip">{ind}</span>)}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="panel">
         <h2>Intake answers</h2>
         <table className="table" style={{ marginTop: 16 }}>
