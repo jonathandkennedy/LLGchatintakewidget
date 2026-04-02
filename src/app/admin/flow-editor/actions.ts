@@ -116,14 +116,110 @@ export async function updateStepAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const isRequired = formData.get("isRequired") === "on";
+  const titleEs = String(formData.get("title_es") ?? "").trim();
+  const descriptionEs = String(formData.get("description_es") ?? "").trim();
+  const placeholder = String(formData.get("placeholder") ?? "").trim();
+  const placeholderEs = String(formData.get("placeholder_es") ?? "").trim();
 
   if (!stepId || !title) return;
+
+  // Build config JSON with translations
+  const { data: existing } = await supabaseAdmin
+    .from("widget_steps")
+    .select("config_json")
+    .eq("id", stepId)
+    .single();
+
+  const config = (existing?.config_json as Record<string, unknown>) ?? {};
+  if (titleEs) config.title_es = titleEs;
+  else delete config.title_es;
+  if (descriptionEs) config.description_es = descriptionEs;
+  else delete config.description_es;
+  if (placeholder) config.placeholder = placeholder;
+  else delete config.placeholder;
+  if (placeholderEs) config.placeholder_es = placeholderEs;
+  else delete config.placeholder_es;
 
   await supabaseAdmin.from("widget_steps").update({
     title,
     description: description || null,
     is_required: isRequired,
+    config_json: config,
   }).eq("id", stepId);
+
+  revalidatePath("/admin/flow-editor");
+}
+
+export async function addStepAction(formData: FormData) {
+  const flowId = String(formData.get("flowId") ?? "");
+  const stepKey = String(formData.get("stepKey") ?? "").trim().toLowerCase().replace(/\s+/g, "_");
+  const stepType = String(formData.get("stepType") ?? "short_text");
+  const title = String(formData.get("title") ?? "").trim();
+  const fieldKey = String(formData.get("fieldKey") ?? "").trim().toLowerCase().replace(/\s+/g, "_");
+  const afterStepId = String(formData.get("afterStepId") ?? "");
+
+  if (!flowId || !stepKey || !title) return;
+
+  // Get current max sort order
+  const { data: steps } = await supabaseAdmin
+    .from("widget_steps")
+    .select("id, sort_order")
+    .eq("flow_id", flowId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  let sortOrder = (steps?.[0]?.sort_order ?? 0) + 1;
+
+  // If inserting after a specific step, shift others down
+  if (afterStepId) {
+    const { data: afterStep } = await supabaseAdmin
+      .from("widget_steps")
+      .select("sort_order")
+      .eq("id", afterStepId)
+      .single();
+
+    if (afterStep) {
+      sortOrder = afterStep.sort_order + 1;
+      // Shift all steps after this one
+      const { data: toShift } = await supabaseAdmin
+        .from("widget_steps")
+        .select("id, sort_order")
+        .eq("flow_id", flowId)
+        .gte("sort_order", sortOrder);
+
+      if (toShift) {
+        for (const s of toShift) {
+          await supabaseAdmin.from("widget_steps").update({ sort_order: s.sort_order + 1 }).eq("id", s.id);
+        }
+      }
+    }
+  }
+
+  await supabaseAdmin.from("widget_steps").insert({
+    flow_id: flowId,
+    step_key: stepKey,
+    step_type: stepType,
+    title,
+    field_key: fieldKey || null,
+    is_required: false,
+    sort_order: sortOrder,
+    config_json: {},
+  });
+
+  revalidatePath("/admin/flow-editor");
+}
+
+export async function updateOptionAction(formData: FormData) {
+  const optionId = String(formData.get("optionId") ?? "");
+  const label = String(formData.get("label") ?? "").trim();
+  const labelEs = String(formData.get("label_es") ?? "").trim();
+
+  if (!optionId || !label) return;
+
+  await supabaseAdmin.from("widget_step_options").update({
+    label,
+    label_es: labelEs || null,
+  }).eq("id", optionId);
 
   revalidatePath("/admin/flow-editor");
 }

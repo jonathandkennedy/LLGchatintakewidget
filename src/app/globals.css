@@ -1267,6 +1267,119 @@ h3 { font-size: 18px; }
 
 /* === Lead Score === */
 
+/* === Flow Editor === */
+
+.flow-step-list { display: flex; flex-direction: column; gap: 12px; }
+
+.flow-step-card { position: relative; }
+
+.flow-step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.flow-step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-weak);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.flow-step-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.flow-step-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.move-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  color: var(--text-secondary);
+}
+
+.move-btn:hover { border-color: var(--primary); color: var(--primary); }
+.move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.flow-lang-section {
+  position: relative;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.flow-lang-tag {
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  background: var(--card);
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+}
+
+.flow-lang-tag.es { color: var(--warning); }
+
+.flow-options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flow-option-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* === Lead Score === */
+
 .score-badge {
   display: inline-flex;
   align-items: center;

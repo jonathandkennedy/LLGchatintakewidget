@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeUsPhone } from "@/lib/utils/phone";
 import { sendLeadNotificationEmail } from "@/lib/notifications/email";
+import { sendLeadFollowUpSms } from "@/lib/notifications/sms";
 import { scoreLeadData } from "@/lib/scoring/lead-score";
 
 type CreateLeadSessionInput = {
@@ -132,6 +133,15 @@ export async function finalizeLeadFromSession(sessionId: string) {
     additionalNotes: lead.additional_notes,
     createdAt: lead.created_at,
   }).catch((err) => console.error("[email] Failed to send lead notification:", err));
+
+  // Send SMS follow-up (fire and forget)
+  sendLeadFollowUpSms({
+    leadId: lead.id,
+    clientId: lead.client_id,
+    firstName: lead.first_name,
+    phone: lead.phone_e164,
+    matterType: lead.matter_type,
+  }).catch((err) => console.error("[sms] Failed to send follow-up:", err));
 
   return lead;
 }
