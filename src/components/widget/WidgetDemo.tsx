@@ -8,9 +8,11 @@ import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
-// Configure video URLs here - replace with actual video URLs
-const WELCOME_VIDEO_URL = ""; // e.g. "/videos/welcome.mp4"
-const CONNECTING_VIDEO_URL = ""; // e.g. "/videos/connecting.mp4"
+// Configure media URLs here
+const WELCOME_VIDEO_URL = ""; // e.g. "/intakeapp/videos/welcome.mp4"
+const CONNECTING_VIDEO_URL = ""; // e.g. "/intakeapp/videos/connecting.mp4"
+const HEADER_IMAGE_URL = "/intakeapp/images/lawyer-logo.webp";
+const AVATAR_IMAGE_URL = "/intakeapp/images/lawyer-logo.webp";
 
 type ChatMessage = {
   id: string;
@@ -224,6 +226,8 @@ export function WidgetDemo() {
             loop
             playsInline
           />
+        ) : HEADER_IMAGE_URL ? (
+          <img src={HEADER_IMAGE_URL} alt="" className="chat-header-image" />
         ) : (
           <div className="chat-video-placeholder">
             <div className="chat-video-avatar-lg" />
@@ -256,7 +260,7 @@ export function WidgetDemo() {
             </div>
             {msg.role === "bot" ? (
               <div className="chat-avatar-row">
-                <div className="chat-avatar" />
+                {AVATAR_IMAGE_URL ? <img src={AVATAR_IMAGE_URL} alt="" className="chat-avatar" /> : <div className="chat-avatar" />}
                 <span className="chat-timestamp">{msg.timestamp}</span>
               </div>
             ) : (
