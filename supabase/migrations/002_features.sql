@@ -203,6 +203,23 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_followups_due ON scheduled_followups(sc
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
 
 -- ============================================================
+-- Error Log
+-- ============================================================
+CREATE TABLE IF NOT EXISTS error_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source text NOT NULL,
+  message text NOT NULL,
+  stack text,
+  context_json jsonb,
+  client_id uuid REFERENCES clients(id) ON DELETE SET NULL,
+  session_id uuid REFERENCES lead_sessions(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_error_log_created ON error_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_error_log_source ON error_log(source);
+
+-- ============================================================
 -- Enable Supabase Realtime on leads table
 -- ============================================================
 ALTER PUBLICATION supabase_realtime ADD TABLE leads;
