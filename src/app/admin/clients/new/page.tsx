@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClientAction } from "../actions";
+import { createClientAction } from "../../actions";
 
 export default function NewClientPage() {
   return (

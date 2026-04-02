@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { updateClientAction } from "../actions";
+import { updateClientAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
