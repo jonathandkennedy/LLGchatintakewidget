@@ -623,12 +623,13 @@ export function WidgetDemo() {
         const totalSteps = DEFAULT_FLOW.steps.filter((s) => !["connecting", "connected", "fallback", "callback_confirmation"].includes(s.type)).length;
         const currentIdx = DEFAULT_FLOW.steps.findIndex((s) => s.key === currentKey);
         const pct = Math.min(Math.round((currentIdx / totalSteps) * 100), 100);
+        const stepLabel = t.stepOf.replace("{current}", String(currentIdx + 1)).replace("{total}", String(totalSteps));
         return (
           <div className="widget-progress-footer">
-            <div className="progress-bar" style={{ margin: 0 }}>
+            <div className="progress-bar" style={{ margin: 0, flex: 1 }}>
               <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
             </div>
-            <span className="progress-label">{pct}% complete</span>
+            <span className="progress-label">{stepLabel}</span>
           </div>
         );
       })()}

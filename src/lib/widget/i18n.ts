@@ -27,6 +27,7 @@ type Translations = {
   simulateFallback: string;
   connectingVideoMsg: string;
   playVideo: string;
+  stepOf: string;
 
   // Flow step titles
   flow: {
@@ -116,6 +117,7 @@ export const translations: Record<Lang, Translations> = {
     simulateFallback: "Simulate fallback",
     connectingVideoMsg: "An intake specialist is connecting with you now.",
     playVideo: "Play video",
+    stepOf: "Step {current} of {total}",
 
     flow: {
       welcome_title: "Injured in an accident?",
@@ -202,6 +204,7 @@ export const translations: Record<Lang, Translations> = {
     simulateFallback: "Simular reserva",
     connectingVideoMsg: "Un especialista de admisión se está conectando con usted ahora.",
     playVideo: "Reproducir video",
+    stepOf: "Paso {current} de {total}",
 
     flow: {
       welcome_title: "¿Sufrió un accidente?",

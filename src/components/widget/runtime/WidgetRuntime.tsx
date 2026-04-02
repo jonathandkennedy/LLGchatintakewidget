@@ -759,13 +759,15 @@ export function WidgetRuntime({ clientSlug }: Props) {
       {step.type !== "welcome" && step.type !== "connected" && step.type !== "fallback" && step.type !== "callback_confirmation" && config && (() => {
         const contentSteps = config.flow.steps.filter((s) => !["connecting", "connected", "fallback", "callback_confirmation"].includes(s.type));
         const currentIdx = contentSteps.findIndex((s) => s.key === currentKey);
-        const pct = Math.min(Math.round(((currentIdx >= 0 ? currentIdx : 0) / contentSteps.length) * 100), 100);
+        const idx = currentIdx >= 0 ? currentIdx : 0;
+        const pct = Math.min(Math.round((idx / contentSteps.length) * 100), 100);
+        const stepLabel = t.stepOf.replace("{current}", String(idx + 1)).replace("{total}", String(contentSteps.length));
         return (
           <div className="widget-progress-footer">
-            <div className="progress-bar" style={{ margin: 0 }}>
+            <div className="progress-bar" style={{ margin: 0, flex: 1 }}>
               <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
             </div>
-            <span className="progress-label">{pct}% {lang === "es" ? "completado" : "complete"}</span>
+            <span className="progress-label">{stepLabel}</span>
           </div>
         );
       })()}
