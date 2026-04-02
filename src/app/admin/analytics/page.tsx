@@ -44,8 +44,8 @@ async function getAnalytics(clientId?: string, days = 7) {
     eventFilter("call_connected"),
     leadFilter(),
     leadFilter("callback_pending"),
-    supabaseAdmin.rpc("get_top_pages_stub").then(() => ({ data: [] as Array<{ page: string; count: number }> })).catch(() => ({ data: [] as Array<{ page: string; count: number }> })),
-    supabaseAdmin.rpc("get_top_sources_stub").then(() => ({ data: [] as Array<{ source: string; count: number }> })).catch(() => ({ data: [] as Array<{ source: string; count: number }> })),
+    Promise.resolve({ data: [] as Array<{ page: string; count: number }> }),
+    Promise.resolve({ data: [] as Array<{ source: string; count: number }> }),
   ]);
 
   // Compute top pages from lead_sessions
