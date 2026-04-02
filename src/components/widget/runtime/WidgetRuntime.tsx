@@ -288,15 +288,26 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   return (
     <div className="widget-card widget-runtime">
-      {/* Toolbar */}
+      {/* Video/Image Header */}
       <div className="chat-video-header">
-        <div className="chat-video-placeholder">
-          {config.branding.avatarUrl ? (
+        {config.branding.welcomeVideoUrl ? (
+          <video
+            className="chat-header-video"
+            src={config.branding.welcomeVideoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        ) : config.branding.avatarUrl ? (
+          <div className="chat-video-placeholder">
             <img src={config.branding.avatarUrl} alt="" className="chat-video-avatar-lg" style={{ objectFit: "cover" }} />
-          ) : (
+          </div>
+        ) : (
+          <div className="chat-video-placeholder">
             <div className="chat-video-avatar-lg" />
-          )}
-        </div>
+          </div>
+        )}
         <div className="chat-toolbar-overlay">
           <button className="chat-toolbar-btn chat-lang-btn" onClick={() => setLang(lang === "en" ? "es" : "en")}>
             {lang === "en" ? t.espanol : t.english}
@@ -401,7 +412,20 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
         {step.type === "connecting" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
-            <div className="status-pill">{t.connecting}</div>
+            {(config.branding.connectingVideoUrl || config.branding.welcomeVideoUrl) && (
+              <div className="chat-inline-video">
+                <video
+                  src={config.branding.connectingVideoUrl || config.branding.welcomeVideoUrl}
+                  autoPlay
+                  playsInline
+                  className="chat-inline-video-el"
+                />
+              </div>
+            )}
+            <div className="chat-bubble chat-bubble-bot" style={{ marginTop: 8, fontWeight: 500 }}>
+              {t.connectingVideoMsg}
+            </div>
+            <div className="status-pill" style={{ marginTop: 8 }}>{t.connecting}</div>
           </div>
         )}
 

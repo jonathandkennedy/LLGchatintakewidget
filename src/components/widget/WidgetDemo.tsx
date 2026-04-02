@@ -8,6 +8,10 @@ import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
 
+// Configure video URLs here - replace with actual video URLs
+const WELCOME_VIDEO_URL = ""; // e.g. "/videos/welcome.mp4"
+const CONNECTING_VIDEO_URL = ""; // e.g. "/videos/connecting.mp4"
+
 type ChatMessage = {
   id: string;
   role: "bot" | "user";
@@ -211,9 +215,20 @@ export function WidgetDemo() {
     <div className="widget-card">
       {/* Video/Image Header */}
       <div className="chat-video-header">
-        <div className="chat-video-placeholder">
-          <div className="chat-video-avatar-lg" />
-        </div>
+        {WELCOME_VIDEO_URL ? (
+          <video
+            className="chat-header-video"
+            src={WELCOME_VIDEO_URL}
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        ) : (
+          <div className="chat-video-placeholder">
+            <div className="chat-video-avatar-lg" />
+          </div>
+        )}
         <div className="chat-toolbar-overlay">
           <button
             className="chat-toolbar-btn chat-lang-btn"
@@ -317,7 +332,20 @@ export function WidgetDemo() {
 
         {step.type === "connecting" && (
           <div className="chat-msg chat-msg-bot" style={{ marginTop: 8 }}>
-            <div className="status-pill">{t.connecting}</div>
+            {CONNECTING_VIDEO_URL && (
+              <div className="chat-inline-video">
+                <video
+                  src={CONNECTING_VIDEO_URL}
+                  autoPlay
+                  playsInline
+                  className="chat-inline-video-el"
+                />
+              </div>
+            )}
+            <div className="chat-bubble chat-bubble-bot" style={{ marginTop: 8, fontWeight: 500 }}>
+              {t.connectingVideoMsg}
+            </div>
+            <div className="status-pill" style={{ marginTop: 8 }}>{t.connecting}</div>
             <div className="chat-options" style={{ marginTop: 8 }}>
               <button className="chat-pill" onClick={() => setCurrentKey("connected")}>{t.simulateConnected}</button>
               <button className="chat-pill" onClick={() => setCurrentKey("transfer_fallback")}>{t.simulateFallback}</button>

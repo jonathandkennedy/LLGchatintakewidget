@@ -59,6 +59,7 @@ export type WidgetBranding = {
   logoUrl?: string;
   avatarUrl?: string;
   welcomeVideoUrl?: string;
+  connectingVideoUrl?: string;
   primaryColor: string;
   accentColor?: string;
   widgetTitle: string;
