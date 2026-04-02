@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getBreachedLeads, formatDuration } from "@/lib/monitoring/sla";
+import { ActivityFeed } from "@/components/admin/ActivityFeed";
 
 export const dynamic = "force-dynamic";
 
@@ -113,6 +114,12 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Activity Feed + Trend side by side */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 24 }}>
+        <section className="admin-card">
+          <ActivityFeed />
+        </section>
+
       {/* Daily Lead Trend */}
       <section className="admin-card" style={{ marginTop: 24 }}>
         <h2>Leads (Last 14 Days)</h2>
@@ -128,6 +135,7 @@ export default async function AdminDashboardPage() {
           ))}
         </div>
       </section>
+      </div>
 
       <SLAAlerts />
 

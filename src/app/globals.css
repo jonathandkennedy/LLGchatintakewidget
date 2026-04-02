@@ -1782,6 +1782,36 @@ h3 { font-size: 18px; }
 
 .admin-link { font-size: 14px; font-weight: 600; }
 
+/* === Activity Feed === */
+
+.activity-feed { min-height: 200px; }
+
+.activity-list { display: flex; flex-direction: column; gap: 0; }
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.activity-item:last-child { border-bottom: none; }
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.activity-content { flex: 1; min-width: 0; }
+.activity-title { font-size: 13px; font-weight: 600; }
+.activity-title a { color: inherit; }
+.activity-detail { font-size: 12px; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.activity-time { font-size: 11px; color: var(--muted-light); white-space: nowrap; flex-shrink: 0; }
+
 /* === Onboarding Wizard === */
 
 .onboarding-progress {
