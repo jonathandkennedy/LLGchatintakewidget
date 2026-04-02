@@ -1324,6 +1324,30 @@ h3 { font-size: 18px; }
 
 .admin-link { font-size: 14px; font-weight: 600; }
 
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.export-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-weak);
+}
+
 /* Admin KPI grids */
 .kpi-grid-4 {
   display: grid;

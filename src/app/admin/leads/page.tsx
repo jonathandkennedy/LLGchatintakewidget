@@ -25,12 +25,25 @@ async function getLeads(searchParams: SearchParams) {
 export default async function AdminLeadsPage({ searchParams }: { searchParams: SearchParams }) {
   const leads = await getLeads(searchParams);
 
+  const exportParams = new URLSearchParams();
+  if (searchParams.status) exportParams.set("status", searchParams.status);
+  if (searchParams.q) exportParams.set("q", searchParams.q);
+  const exportUrl = `/intakeapp/api/admin/leads/export${exportParams.toString() ? "?" + exportParams.toString() : ""}`;
+
   return (
     <main className="page-shell">
       <section className="panel">
-        <div className="eyebrow">Admin inbox</div>
-        <h1>Leads</h1>
-        <p className="muted text-sm" style={{ marginTop: 4 }}>Filter recent leads, open a detail page, and update statuses.</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div className="eyebrow">Admin inbox</div>
+            <h1>Leads</h1>
+            <p className="muted text-sm" style={{ marginTop: 4 }}>Filter recent leads, open a detail page, and update statuses.</p>
+          </div>
+          <a href={exportUrl} className="export-btn" download>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </a>
+        </div>
 
         <form className="filter-grid" action="/admin/leads">
           <input className="text-input" type="text" name="q" defaultValue={searchParams.q ?? ""} placeholder="Search name or phone" />
