@@ -86,19 +86,53 @@ type ConnectResponse = {
 };
 
 export function WidgetRuntime(props: Props) {
-  const clientSlug = props.clientSlug;
-  const [config, setConfig] = useState(null as WidgetPublicConfig | null);
-  const [currentKey, setCurrentKey] = useState("welcome");
-  const [sessionId, setSessionId] = useState(null as string | null);
-  const [leadId, setLeadId] = useState(null as string | null);
-  const [answers, setAnswers] = useState({} as Record<string, unknown>);
-  const [inputValue, setInputValue] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [selectedMulti, setSelectedMulti] = useState([] as string[]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  var clientSlug = props.clientSlug;
+  var configState = useState(null as WidgetPublicConfig | null);
+  var config = configState[0];
+  var setConfig = configState[1];
+
+  var currentKeyState = useState("welcome");
+  var currentKey = currentKeyState[0];
+  var setCurrentKey = currentKeyState[1];
+
+  var sessionIdState = useState(null as string | null);
+  var sessionId = sessionIdState[0];
+  var setSessionId = sessionIdState[1];
+
+  var leadIdState = useState(null as string | null);
+  var leadId = leadIdState[0];
+  var setLeadId = leadIdState[1];
+
+  var answersState = useState({} as Record<string, unknown>);
+  var setAnswers = answersState[1];
+
+  var inputValueState = useState("");
+  var inputValue = inputValueState[0];
+  var setInputValue = inputValueState[1];
+
+  var firstNameState = useState("");
+  var firstName = firstNameState[0];
+  var setFirstName = firstNameState[1];
+
+  var lastNameState = useState("");
+  var lastName = lastNameState[0];
+  var setLastName = lastNameState[1];
+
+  var selectedMultiState = useState([] as string[]);
+  var selectedMulti = selectedMultiState[0];
+  var setSelectedMulti = selectedMultiState[1];
+
+  var errorState = useState("");
+  var error = errorState[0];
+  var setError = errorState[1];
+
+  var loadingState = useState(true);
+  var loading = loadingState[0];
+  var setLoading = loadingState[1];
+
+  var submittingState = useState(false);
+  var submitting = submittingState[0];
+  var setSubmitting = submittingState[1];
 
   useEffect(function bootWidget() {
     fetch("/api/widget/config?clientSlug=" + encodeURIComponent(clientSlug), { cache: "no-store" })
@@ -182,10 +216,11 @@ export function WidgetRuntime(props: Props) {
   }
 
   function handleOptionSelect(optionKey: string) {
-    if (!step || !step.fieldKey) return;
+    var currentStep = step;
+    if (!currentStep || !currentStep.fieldKey) return;
     setSubmitting(true);
     setError("");
-    submitField(step.fieldKey, optionKey)
+    submitField(currentStep.fieldKey, optionKey)
       .then(function (json) {
         if (json.nextStepKey) setCurrentKey(json.nextStepKey);
       })
@@ -197,39 +232,39 @@ export function WidgetRuntime(props: Props) {
 
   function handleContinue() {
     if (!step) return;
+    var currentStep = step;
     setSubmitting(true);
     setError("");
 
     var promise = Promise.resolve();
 
-    if (step.type === "welcome") {
+    if (currentStep.type === "welcome") {
       promise = ensureSession().then(function (sid) {
         setSessionId(sid);
-        setCurrentKey(step.next || "matter_type");
+        setCurrentKey(currentStep.next || "matter_type");
       });
-    } else if (step.type === "single_select" || step.type === "date_range") {
-      // handled by handleOptionSelect
+    } else if (currentStep.type === "single_select" || currentStep.type === "date_range") {
       setSubmitting(false);
       return;
-    } else if (step.type === "long_text" || step.type === "short_text" || step.type === "phone" || step.type === "email" || step.type === "textarea_optional" || step.type === "dropdown") {
-      promise = submitField(String(step.fieldKey || ""), inputValue).then(function (json) {
+    } else if (currentStep.type === "long_text" || currentStep.type === "short_text" || currentStep.type === "phone" || currentStep.type === "email" || currentStep.type === "textarea_optional" || currentStep.type === "dropdown") {
+      promise = submitField(String(currentStep.fieldKey || ""), inputValue).then(function (json) {
         if (json.nextStepKey) setCurrentKey(json.nextStepKey);
       });
-    } else if (step.type === "multi_select") {
-      promise = submitField(String(step.fieldKey || ""), selectedMulti).then(function (json) {
+    } else if (currentStep.type === "multi_select") {
+      promise = submitField(String(currentStep.fieldKey || ""), selectedMulti).then(function (json) {
         if (json.nextStepKey) setCurrentKey(json.nextStepKey);
       });
-    } else if (step.type === "name") {
+    } else if (currentStep.type === "name") {
       promise = ensureSession().then(function (sid) {
         return Promise.all([
-          submitField("first_name", firstName, step.key),
-          submitField("last_name", lastName, step.key),
+          submitField("first_name", firstName, currentStep.key),
+          submitField("last_name", lastName, currentStep.key),
         ]).then(function () {
           setSessionId(sid);
-          setCurrentKey(step.next || "phone");
+          setCurrentKey(currentStep.next || "phone");
         });
       });
-    } else if (step.type === "transfer_ready") {
+    } else if (currentStep.type === "transfer_ready") {
       promise = ensureSession().then(function (sid) {
         return fetch("/api/widget/session/complete", {
           method: "POST",
