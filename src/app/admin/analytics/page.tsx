@@ -33,8 +33,6 @@ async function getAnalytics(clientId?: string, days = 7) {
     { count: callConnected },
     { count: totalLeads },
     { count: callbackPending },
-    { data: topPages },
-    { data: topSources },
   ] = await Promise.all([
     eventFilter("widget_opened"),
     eventFilter("chat_started"),
@@ -44,11 +42,27 @@ async function getAnalytics(clientId?: string, days = 7) {
     eventFilter("call_connected"),
     leadFilter(),
     leadFilter("callback_pending"),
-    Promise.resolve({ data: [] as Array<{ page: string; count: number }> }),
-    Promise.resolve({ data: [] as Array<{ source: string; count: number }> }),
   ]);
 
-  // Compute top pages from lead_sessions
+  // Per-step answer counts for drop-off analysis
+  let stepQuery = supabaseAdmin
+    .from("lead_session_answers")
+    .select("step_key")
+    .gte("created_at", since);
+  if (clientId) {
+    // Join through sessions to filter by client
+    stepQuery = stepQuery;
+  }
+  const { data: stepAnswers } = await stepQuery.limit(5000);
+
+  const stepCounts = new Map<string, number>();
+  for (const a of stepAnswers ?? []) {
+    if (a.step_key) {
+      stepCounts.set(a.step_key, (stepCounts.get(a.step_key) ?? 0) + 1);
+    }
+  }
+
+  // Top pages
   let pageQuery = supabaseAdmin
     .from("lead_sessions")
     .select("landing_page_url")
@@ -70,6 +84,7 @@ async function getAnalytics(clientId?: string, days = 7) {
     }
   }
 
+  // Top sources
   let sourceQuery = supabaseAdmin
     .from("lead_sessions")
     .select("utm_source")
@@ -86,6 +101,22 @@ async function getAnalytics(clientId?: string, days = 7) {
     }
   }
 
+  // Matter type breakdown
+  let matterQuery = supabaseAdmin
+    .from("leads")
+    .select("matter_type")
+    .gte("created_at", since)
+    .not("matter_type", "is", null);
+  if (clientId) matterQuery = matterQuery.eq("client_id", clientId);
+  const { data: matterLeads } = await matterQuery.limit(500);
+
+  const matterCounts = new Map<string, number>();
+  for (const l of matterLeads ?? []) {
+    if (l.matter_type) {
+      matterCounts.set(l.matter_type, (matterCounts.get(l.matter_type) ?? 0) + 1);
+    }
+  }
+
   return {
     widgetOpened: widgetOpened ?? 0,
     chatStarted: chatStarted ?? 0,
@@ -95,8 +126,10 @@ async function getAnalytics(clientId?: string, days = 7) {
     callConnected: callConnected ?? 0,
     totalLeads: totalLeads ?? 0,
     callbackPending: callbackPending ?? 0,
+    stepCounts: Object.fromEntries(stepCounts),
     topPages: [...pageCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([page, count]) => ({ page, count })),
     topSources: [...sourceCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([source, count]) => ({ source, count })),
+    matterTypes: [...matterCounts.entries()].sort((a, b) => b[1] - a[1]).map(([type, count]) => ({ type, count })),
   };
 }
 
@@ -105,15 +138,82 @@ async function getClients() {
   return data ?? [];
 }
 
+// Funnel step config
+const FUNNEL_STEPS = [
+  { key: "widgetOpened", label: "Widget Opened" },
+  { key: "chatStarted", label: "Chat Started" },
+  { key: "flowCompleted", label: "Flow Completed" },
+  { key: "totalLeads", label: "Leads Captured" },
+  { key: "callCtaClicked", label: "Call CTA Clicked" },
+  { key: "callConnected", label: "Calls Connected" },
+] as const;
+
+// Intake step order for drop-off chart
+const INTAKE_STEPS = [
+  { key: "matter_type", label: "Matter Type" },
+  { key: "incident_summary", label: "Incident Summary" },
+  { key: "injury_status", label: "Injury Status" },
+  { key: "injury_areas", label: "Injury Areas" },
+  { key: "medical_treatment_status", label: "Medical Treatment" },
+  { key: "incident_state", label: "State" },
+  { key: "incident_city", label: "City" },
+  { key: "incident_date_range", label: "Date Range" },
+  { key: "full_name", label: "Full Name" },
+  { key: "phone", label: "Phone" },
+  { key: "email", label: "Email" },
+  { key: "additional_notes", label: "Notes" },
+];
+
+function pct(value: number, total: number): string {
+  if (total === 0) return "0%";
+  return Math.round((value / total) * 100) + "%";
+}
+
+function barWidth(value: number, max: number): string {
+  if (max === 0) return "0%";
+  return Math.max((value / max) * 100, 1) + "%";
+}
+
 export default async function AnalyticsPage({ searchParams }: { searchParams: SearchParams }) {
   const days = Number(searchParams.days) || 7;
   const clients = await getClients();
   const stats = await getAnalytics(searchParams.clientId, days);
 
+  const funnelValues: Record<string, number> = {
+    widgetOpened: stats.widgetOpened,
+    chatStarted: stats.chatStarted,
+    flowCompleted: stats.flowCompleted,
+    totalLeads: stats.totalLeads,
+    callCtaClicked: stats.callCtaClicked,
+    callConnected: stats.callConnected,
+  };
+  const funnelMax = Math.max(...FUNNEL_STEPS.map((s) => funnelValues[s.key] ?? 0), 1);
+  const conversionRate = stats.widgetOpened > 0 ? ((stats.totalLeads / stats.widgetOpened) * 100).toFixed(1) : "0";
+  const callRate = stats.totalLeads > 0 ? ((stats.callConnected / stats.totalLeads) * 100).toFixed(1) : "0";
+
+  // Build drop-off data
+  const dropOffData = INTAKE_STEPS.map((s) => ({
+    ...s,
+    count: stats.stepCounts[s.key] ?? 0,
+  }));
+  const dropOffMax = Math.max(...dropOffData.map((d) => d.count), 1);
+
+  const matterMax = Math.max(...stats.matterTypes.map((m) => m.count), 1);
+
+  const MATTER_LABELS: Record<string, string> = {
+    car_accident: "Car Accident",
+    truck_accident: "Truck Accident",
+    motorcycle_accident: "Motorcycle Accident",
+    slip_fall: "Slip & Fall",
+    wrongful_death: "Wrongful Death",
+    other_injury: "Other Injury",
+  };
+
   return (
     <div className="admin-content">
       <div className="admin-page-header">
         <h1>Analytics</h1>
+        <p className="muted text-sm">Conversion funnel, drop-off rates, and intake performance.</p>
       </div>
 
       <form className="filter-grid" action="" style={{ maxWidth: 480 }}>
@@ -130,26 +230,140 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
         <button className="primary-button" type="submit">Apply</button>
       </form>
 
-      <h2 style={{ marginTop: 24, marginBottom: 12 }}>Funnel</h2>
+      {/* Summary KPIs */}
       <div className="kpi-grid-4">
-        <div className="kpi-card"><div className="kpi-label">Widget Opens</div><div className="kpi-value">{stats.widgetOpened}</div></div>
-        <div className="kpi-card"><div className="kpi-label">Chats Started</div><div className="kpi-value">{stats.chatStarted}</div></div>
-        <div className="kpi-card"><div className="kpi-label">Flows Completed</div><div className="kpi-value">{stats.flowCompleted}</div></div>
-        <div className="kpi-card"><div className="kpi-label">Leads Captured</div><div className="kpi-value">{stats.totalLeads}</div></div>
+        <div className="kpi-card">
+          <div className="kpi-label">Widget Opens</div>
+          <div className="kpi-value">{stats.widgetOpened}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Leads Captured</div>
+          <div className="kpi-value">{stats.totalLeads}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Conversion Rate</div>
+          <div className="kpi-value accent">{conversionRate}%</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Call Connect Rate</div>
+          <div className="kpi-value success">{callRate}%</div>
+        </div>
       </div>
 
-      <h2 style={{ marginTop: 24, marginBottom: 12 }}>Calls</h2>
-      <div className="kpi-grid-4">
-        <div className="kpi-card"><div className="kpi-label">Call CTA Clicks</div><div className="kpi-value">{stats.callCtaClicked}</div></div>
-        <div className="kpi-card"><div className="kpi-label">Calls Initiated</div><div className="kpi-value">{stats.callInitiated}</div></div>
-        <div className="kpi-card"><div className="kpi-label">Calls Connected</div><div className="kpi-value success">{stats.callConnected}</div></div>
-        <div className="kpi-card"><div className="kpi-label">Callbacks Pending</div><div className="kpi-value accent">{stats.callbackPending}</div></div>
-      </div>
+      {/* Conversion Funnel */}
+      <section style={{ marginTop: 32 }}>
+        <h2 style={{ marginBottom: 16 }}>Conversion Funnel</h2>
+        <div className="funnel-chart">
+          {FUNNEL_STEPS.map((funnelStep, i) => {
+            const value = funnelValues[funnelStep.key] ?? 0;
+            const prevValue = i > 0 ? (funnelValues[FUNNEL_STEPS[i - 1].key] ?? 0) : 0;
+            const dropOff = i > 0 && prevValue > 0 ? prevValue - value : 0;
+            const dropPct = i > 0 && prevValue > 0 ? Math.round((dropOff / prevValue) * 100) : 0;
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 24 }}>
+            return (
+              <div key={funnelStep.key}>
+                {i > 0 && dropOff > 0 && (
+                  <div className="funnel-drop">
+                    <div className="funnel-drop-label">
+                      ↓ {dropOff} dropped ({dropPct}%)
+                    </div>
+                  </div>
+                )}
+                <div className="funnel-step">
+                  <div className="funnel-label">{funnelStep.label}</div>
+                  <div className="funnel-bar-track">
+                    <div
+                      className={`funnel-bar-fill level-${i}`}
+                      style={{ width: barWidth(value, funnelMax) }}
+                    />
+                  </div>
+                  <div className="funnel-count">{value}</div>
+                  <div className="funnel-pct">{pct(value, funnelMax)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Step Drop-off Chart */}
+      <section style={{ marginTop: 32 }}>
+        <h2 style={{ marginBottom: 16 }}>Step Completion (Drop-off Analysis)</h2>
+        <div className="admin-card">
+          <div className="bar-chart">
+            {dropOffData.map((d, i) => {
+              const prevCount = i > 0 ? dropOffData[i - 1].count : dropOffMax;
+              const dropPct = prevCount > 0 && i > 0 ? Math.round(((prevCount - d.count) / prevCount) * 100) : 0;
+              return (
+                <div key={d.key}>
+                  <div className="bar-row">
+                    <div className="bar-label">
+                      {i + 1}. {d.label}
+                      {dropPct > 10 && i > 0 && (
+                        <span style={{ color: "var(--error)", fontSize: 11, marginLeft: 6 }}>-{dropPct}%</span>
+                      )}
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: barWidth(d.count, dropOffMax) }} />
+                    </div>
+                    <div className="bar-value">{d.count}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Two-column: Matter Types + Calls */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 32 }}>
         <section className="admin-card">
-          <h2>Top Pages</h2>
-          {stats.topPages.length === 0 ? <p className="muted">No page data yet.</p> : (
+          <h2 style={{ marginBottom: 16 }}>Matter Types</h2>
+          {stats.matterTypes.length === 0 ? (
+            <p className="muted text-sm">No matter type data yet.</p>
+          ) : (
+            <div className="bar-chart">
+              {stats.matterTypes.map((m) => (
+                <div key={m.type} className="bar-row">
+                  <div className="bar-label">{MATTER_LABELS[m.type] ?? m.type}</div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: barWidth(m.count, matterMax) }} />
+                  </div>
+                  <div className="bar-value">{m.count}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="admin-card">
+          <h2 style={{ marginBottom: 16 }}>Call Performance</h2>
+          <div className="kpi-grid" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 0 }}>
+            <div className="kpi-card">
+              <div className="kpi-label">CTA Clicks</div>
+              <div className="kpi-value">{stats.callCtaClicked}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Initiated</div>
+              <div className="kpi-value">{stats.callInitiated}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Connected</div>
+              <div className="kpi-value success">{stats.callConnected}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Callbacks</div>
+              <div className="kpi-value accent">{stats.callbackPending}</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* Two-column: Top Pages + Top Sources */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
+        <section className="admin-card">
+          <h2 style={{ marginBottom: 16 }}>Top Pages</h2>
+          {stats.topPages.length === 0 ? <p className="muted text-sm">No page data yet.</p> : (
             <table className="table">
               <thead><tr><th>Page</th><th>Sessions</th></tr></thead>
               <tbody>
@@ -160,8 +374,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
         </section>
 
         <section className="admin-card">
-          <h2>Top Sources</h2>
-          {stats.topSources.length === 0 ? <p className="muted">No source data yet.</p> : (
+          <h2 style={{ marginBottom: 16 }}>Top Sources</h2>
+          {stats.topSources.length === 0 ? <p className="muted text-sm">No source data yet.</p> : (
             <table className="table">
               <thead><tr><th>Source</th><th>Sessions</th></tr></thead>
               <tbody>
