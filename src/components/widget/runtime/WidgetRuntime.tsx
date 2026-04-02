@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetPublicConfig, WidgetStep } from "@/types/widget";
 import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlaceholder, type Lang } from "@/lib/widget/i18n";
 import { saveSession, loadSession, clearSession } from "@/lib/widget/session-store";
+import { fetchWithRetry } from "@/lib/utils/fetch-retry";
 
 type Props = { clientSlug: string };
 
@@ -61,7 +62,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   useEffect(() => {
     async function boot() {
-      const response = await fetch(`/api/widget/config?clientSlug=${encodeURIComponent(clientSlug)}`, { cache: "no-store" });
+      const response = await fetchWithRetry(`/api/widget/config?clientSlug=${encodeURIComponent(clientSlug)}`, { cache: "no-store" }, { maxRetries: 2, baseDelay: 500 });
       const nextConfig = await response.json();
       setConfig(nextConfig);
 
@@ -145,7 +146,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
     setSubmitting(true);
     try {
       // Revert server-side answers from this step forward
-      const response = await fetch("/api/widget/session/revert", {
+      const response = await fetchWithRetry("/api/widget/session/revert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, toStepKey: msg.stepKey }),
@@ -179,7 +180,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
   async function ensureSession() {
     if (!config) throw new Error("Widget config missing");
     if (sessionId) return sessionId;
-    const response = await fetch("/api/widget/session/start", {
+    const response = await fetchWithRetry("/api/widget/session/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -198,7 +199,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   async function submitField(fieldKey: string, value: unknown, stepKey = currentKey) {
     const sid = await ensureSession();
-    const response = await fetch("/api/widget/session/answer", {
+    const response = await fetchWithRetry("/api/widget/session/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: sid, stepKey, fieldKey, value }),
@@ -218,7 +219,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
     setSubmitting(true);
     try {
       // Revert server-side
-      await fetch("/api/widget/session/revert", {
+      await fetchWithRetry("/api/widget/session/revert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, toStepKey: prevKey }),
@@ -340,7 +341,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
     addUserMessage(t.connectMeNow);
     try {
       const sid = await ensureSession();
-      const completeRes = await fetch("/api/widget/session/complete", {
+      const completeRes = await fetchWithRetry("/api/widget/session/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: sid }),
@@ -351,7 +352,7 @@ export function WidgetRuntime({ clientSlug }: Props) {
       setStepHistory((p) => [...p, currentKey]);
       setCurrentKey("connecting");
 
-      const connectRes = await fetch("/api/widget/call/connect", {
+      const connectRes = await fetchWithRetry("/api/widget/call/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: sid, leadId: completeJson.leadId }),
