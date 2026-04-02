@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { isAdminAuthenticated } from "@/lib/auth/admin-auth";
 import { NotificationBell } from "@/components/admin/NotificationBell";
+import { LogoutButton } from "@/components/admin/LogoutButton";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: "D" },
@@ -14,6 +17,10 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  if (!isAdminAuthenticated()) {
+    redirect("/admin/login");
+  }
+
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
@@ -33,6 +40,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <span className="admin-nav-icon">W</span>
             Widget Preview
           </Link>
+          <LogoutButton />
         </div>
       </aside>
       <main className="admin-main">

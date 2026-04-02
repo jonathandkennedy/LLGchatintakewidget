@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminAuth } from "@/lib/auth/api-auth";
 
 export async function POST(request: Request) {
+  const authError = requireAdminAuth();
+  if (authError) return authError;
+
   try {
     const formData = await request.formData();
     const clientId = String(formData.get("clientId") ?? "");

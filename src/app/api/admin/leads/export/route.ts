@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminAuth } from "@/lib/auth/api-auth";
 
 const CSV_COLUMNS = [
   { key: "first_name", label: "First Name" },
@@ -33,6 +34,9 @@ function escapeCsv(value: unknown): string {
 }
 
 export async function GET(request: NextRequest) {
+  const authError = requireAdminAuth();
+  if (authError) return authError;
+
   const searchParams = request.nextUrl.searchParams;
   const clientId = searchParams.get("clientId");
   const status = searchParams.get("status");

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminAuth } from "@/lib/auth/api-auth";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const authError = requireAdminAuth();
+  if (authError) return authError;
   const body = await request.json().catch(() => ({}));
   const status = typeof body.status === "string" ? body.status : "";
 
