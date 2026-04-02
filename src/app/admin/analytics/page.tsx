@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getResponseTimeStats, formatMinutes } from "@/lib/monitoring/response-time";
 
 export const dynamic = "force-dynamic";
 
@@ -385,6 +386,56 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
           )}
         </section>
       </div>
+
+      {/* Response Time */}
+      <ResponseTimeSection clientId={searchParams.clientId} days={days} />
     </div>
+  );
+}
+
+async function ResponseTimeSection({ clientId, days }: { clientId?: string; days: number }) {
+  const stats = await getResponseTimeStats(clientId, days);
+  if (stats.length === 0) return null;
+
+  const maxAvg = Math.max(...stats.map((s) => s.avgResponseMinutes), 1);
+
+  return (
+    <section style={{ marginTop: 32 }}>
+      <h2 style={{ marginBottom: 16 }}>Team Response Times</h2>
+      <div className="admin-card">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Team Member</th>
+              <th>Leads</th>
+              <th>Avg Response</th>
+              <th>Median</th>
+              <th>SLA Breaches</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.map((s) => (
+              <tr key={s.memberName}>
+                <td><strong>{s.memberName}</strong></td>
+                <td>{s.totalLeads}</td>
+                <td>
+                  <span className={s.avgResponseMinutes <= 15 ? "text-sm" : ""} style={{ fontWeight: 600, color: s.avgResponseMinutes <= 15 ? "var(--success)" : s.avgResponseMinutes <= 60 ? "var(--warning)" : "var(--error)" }}>
+                    {formatMinutes(s.avgResponseMinutes)}
+                  </span>
+                </td>
+                <td>{formatMinutes(s.medianResponseMinutes)}</td>
+                <td>{s.slaBreaches > 0 ? <span style={{ color: "var(--error)", fontWeight: 600 }}>{s.slaBreaches}</span> : "0"}</td>
+                <td style={{ width: 120 }}>
+                  <div className="bar-track" style={{ height: 8 }}>
+                    <div className="bar-fill" style={{ width: `${Math.min((s.avgResponseMinutes / maxAvg) * 100, 100)}%`, background: s.avgResponseMinutes <= 15 ? "var(--success)" : s.avgResponseMinutes <= 60 ? "var(--warning)" : "var(--error)" }} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
