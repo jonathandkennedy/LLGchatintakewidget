@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetPublicConfig, WidgetStep } from "@/types/widget";
 import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlaceholder, type Lang } from "@/lib/widget/i18n";
 import { saveSession, loadSession, clearSession } from "@/lib/widget/session-store";
 import { fetchWithRetry } from "@/lib/utils/fetch-retry";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
 
 type Props = { clientSlug: string };
 
@@ -59,6 +60,23 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
   const t = translations[lang];
   const widgetId = `runtime_${clientSlug}`;
+
+  // Voice input
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setInputValue((prev) => (prev + " " + text).trim());
+  }, []);
+  const speech = useSpeechToText(handleVoiceTranscript, lang === "es" ? "es-US" : "en-US");
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        window.parent?.postMessage?.("widget-close", "*");
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     async function boot() {
@@ -578,7 +596,8 @@ export function WidgetRuntime({ clientSlug }: Props) {
 
       {(step.type === "short_text" || step.type === "phone" || step.type === "email") && (
         <div className="chat-input-bar">
-          <div className="chat-input-row">
+          <div className="chat-input-underline">
+            {speech.listening && speech.interim && <div className="voice-interim">{speech.interim}</div>}
             <input
               className="chat-input-field"
               type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"}
@@ -587,14 +606,29 @@ export function WidgetRuntime({ clientSlug }: Props) {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
             />
-            <button className={`chat-submit-btn ${hasInput ? "active" : ""}`} disabled={!hasInput || submitting} onClick={handleTextSubmit}>&#9654;</button>
+          </div>
+          <div className="chat-input-toolbar">
+            <div className="chat-input-modes">
+              <button className="chat-mode-btn active" title="Text">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+              </button>
+              {speech.supported && (
+                <button className={`chat-mode-btn ${speech.listening ? "recording" : ""}`} onClick={speech.toggle} title="Voice">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
+              )}
+            </div>
+            <button className={`chat-send-btn ${hasInput ? "active" : ""}`} disabled={!hasInput || submitting} onClick={handleTextSubmit}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
           </div>
         </div>
       )}
 
       {(step.type === "long_text" || step.type === "textarea_optional") && (
         <div className="chat-input-bar">
-          <div className="chat-input-row">
+          <div className="chat-input-underline">
+            {speech.listening && speech.interim && <div className="voice-interim">{speech.interim}</div>}
             <textarea
               className="chat-input-field"
               placeholder={getPlaceholder(lang, step.key) ?? step.placeholder ?? t.typeHere}
@@ -602,11 +636,21 @@ export function WidgetRuntime({ clientSlug }: Props) {
               onChange={(e) => setInputValue(e.target.value)}
               rows={2}
             />
-            <button
-              className={`chat-submit-btn ${hasInput ? "active" : ""}`}
-              disabled={!hasInput && step.type !== "textarea_optional"}
-              onClick={handleTextSubmit}
-            >&#9654;</button>
+          </div>
+          <div className="chat-input-toolbar">
+            <div className="chat-input-modes">
+              <button className="chat-mode-btn active" title="Text">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+              </button>
+              {speech.supported && (
+                <button className={`chat-mode-btn ${speech.listening ? "recording" : ""}`} onClick={speech.toggle} title="Voice">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
+              )}
+            </div>
+            <button className={`chat-send-btn ${hasInput ? "active" : ""}`} disabled={(!hasInput && step.type !== "textarea_optional") || submitting} onClick={handleTextSubmit}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
           </div>
         </div>
       )}

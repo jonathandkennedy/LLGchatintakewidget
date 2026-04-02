@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { DEFAULT_FLOW } from "@/lib/widget/default-flow";
 import { translations, getStepTitle, getStepDescription, getOptionLabel, getPlaceholder, type Lang } from "@/lib/widget/i18n";
 import { saveSession, loadSession, clearSession } from "@/lib/widget/session-store";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
 import type { WidgetStep } from "@/types/widget";
 
 const STATE_OPTIONS = ["Arizona", "California", "Nevada", "Washington"];
@@ -103,6 +104,25 @@ export function WidgetDemo() {
 
   const t = translations[lang];
   const step = useMemo(() => DEFAULT_FLOW.steps.find((item) => item.key === currentKey), [currentKey]);
+
+  // Voice input
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setInputValue((prev) => (prev + " " + text).trim());
+    setInputMode("text");
+  }, []);
+  const speech = useSpeechToText(handleVoiceTranscript, lang === "es" ? "es-US" : "en-US");
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        // Close widget (postMessage to parent in iframe context)
+        window.parent?.postMessage?.("widget-close", "*");
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Restore saved session on mount
   useEffect(() => {
@@ -473,6 +493,7 @@ export function WidgetDemo() {
       {showTextInput && (
         <div className="chat-input-bar">
           <div className="chat-input-underline">
+            {speech.listening && speech.interim && <div className="voice-interim">{speech.interim}</div>}
             <input
               className="chat-input-field"
               type={step.type === "email" ? "email" : step.type === "phone" ? "tel" : "text"}
@@ -485,10 +506,10 @@ export function WidgetDemo() {
           {/* Input mode toolbar */}
           <div className="chat-input-toolbar">
             <div className="chat-input-modes">
-              <button className={`chat-mode-btn ${inputMode === "text" ? "active" : ""}`} onClick={() => setInputMode("text")} title="Text">
+              <button className={`chat-mode-btn ${inputMode === "text" ? "active" : ""}`} onClick={() => { setInputMode("text"); speech.stop(); }} title="Text">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
               </button>
-              <button className={`chat-mode-btn ${inputMode === "voice" ? "active" : ""}`} onClick={() => setInputMode("voice")} title="Voice">
+              <button className={`chat-mode-btn ${inputMode === "voice" ? "active" : ""} ${speech.listening ? "recording" : ""}`} onClick={() => { setInputMode("voice"); speech.toggle(); }} title="Voice">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
               </button>
               <button className={`chat-mode-btn ${inputMode === "video" ? "active" : ""}`} onClick={() => setInputMode("video")} title="Video">
@@ -505,6 +526,7 @@ export function WidgetDemo() {
       {showTextarea && (
         <div className="chat-input-bar">
           <div className="chat-input-underline">
+            {speech.listening && speech.interim && <div className="voice-interim">{speech.interim}</div>}
             <textarea
               className="chat-input-field"
               placeholder={getPlaceholder(lang, step.key) ?? step.placeholder ?? t.typeHere}
@@ -515,10 +537,10 @@ export function WidgetDemo() {
           </div>
           <div className="chat-input-toolbar">
             <div className="chat-input-modes">
-              <button className={`chat-mode-btn ${inputMode === "text" ? "active" : ""}`} onClick={() => setInputMode("text")} title="Text">
+              <button className={`chat-mode-btn ${inputMode === "text" ? "active" : ""}`} onClick={() => { setInputMode("text"); speech.stop(); }} title="Text">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
               </button>
-              <button className={`chat-mode-btn ${inputMode === "voice" ? "active" : ""}`} onClick={() => setInputMode("voice")} title="Voice">
+              <button className={`chat-mode-btn ${inputMode === "voice" ? "active" : ""} ${speech.listening ? "recording" : ""}`} onClick={() => { setInputMode("voice"); speech.toggle(); }} title="Voice">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
               </button>
               <button className={`chat-mode-btn ${inputMode === "video" ? "active" : ""}`} onClick={() => setInputMode("video")} title="Video">

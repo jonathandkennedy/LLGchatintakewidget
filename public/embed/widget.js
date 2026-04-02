@@ -45,6 +45,11 @@
     if (event.data === "widget-close" && open) toggleWidget();
   });
 
+  // Escape key closes widget
+  window.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && open) toggleWidget();
+  });
+
   function applyIframeStyles() {
     if (!iframe) return;
     var mobile = isMobile();
