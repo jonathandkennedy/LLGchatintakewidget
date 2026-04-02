@@ -226,7 +226,7 @@ export function NotificationBell() {
               notifications.map((n) => (
                 <a
                   key={n.id}
-                  href={n.leadId ? `/intakeapp/admin/leads/${n.leadId}` : "#"}
+                  href={n.leadId ? `/admin/leads/${n.leadId}` : "#"}
                   className={`notif-item ${n.read ? "" : "unread"}`}
                   onClick={() => {
                     setNotifications((prev) => {

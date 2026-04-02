@@ -40,7 +40,7 @@ export function LeadCompare({ leadA, leadB }: Props) {
     if (!confirm("Merge these leads? This cannot be undone.")) return;
     setMerging(true);
     try {
-      const res = await fetch("/intakeapp/api/admin/leads/merge", {
+      const res = await fetch("/api/admin/leads/merge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ primaryId, secondaryId }),

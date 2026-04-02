@@ -11,7 +11,7 @@ async function getClients() {
 export default async function InstallPage() {
   const clients = await getClients();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://your-domain.com";
-  const widgetUrl = process.env.NEXT_PUBLIC_WIDGET_CDN_URL ?? `${appUrl}/intakeapp/embed/widget.js`;
+  const widgetUrl = process.env.NEXT_PUBLIC_WIDGET_CDN_URL ?? `${appUrl}/embed/widget.js`;
 
   return (
     <div className="admin-content">

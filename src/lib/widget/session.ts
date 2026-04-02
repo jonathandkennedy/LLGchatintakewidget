@@ -185,7 +185,7 @@ export async function finalizeLeadFromSession(sessionId: string) {
     matterType: lead.matter_type,
     score: scoreResult.total,
     scoreTier: scoreResult.tier,
-    leadUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/intakeapp/admin/leads/${lead.id}`,
+    leadUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/admin/leads/${lead.id}`,
   }).catch((err) => console.error("[slack] Failed:", err));
 
   // Fire webhooks (fire and forget)

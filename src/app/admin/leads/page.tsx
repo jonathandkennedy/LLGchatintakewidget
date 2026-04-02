@@ -44,7 +44,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: S
   const exportParams = new URLSearchParams();
   if (searchParams.status) exportParams.set("status", searchParams.status);
   if (searchParams.q) exportParams.set("q", searchParams.q);
-  const exportUrl = `/intakeapp/api/admin/leads/export${exportParams.toString() ? "?" + exportParams.toString() : ""}`;
+  const exportUrl = `/api/admin/leads/export${exportParams.toString() ? "?" + exportParams.toString() : ""}`;
 
   // Get unique assigned names for filter
   const assignedNames = [...new Set(leads.map((l) => l.assigned_to_name).filter(Boolean))];

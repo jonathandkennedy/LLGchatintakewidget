@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
     const token = searchParams.get("token");
     if (token) {
       setLoading(true);
-      fetch("/intakeapp/api/admin/auth", {
+      fetch("/api/admin/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "verify_magic_link", token }),
@@ -49,7 +49,7 @@ export default function AdminLoginPage() {
     setError("");
     setMessage("");
     try {
-      const response = await fetch("/intakeapp/api/admin/auth", {
+      const response = await fetch("/api/admin/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

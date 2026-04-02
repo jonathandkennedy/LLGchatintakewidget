@@ -42,7 +42,7 @@ export function BulkActions({ leadIds }: Props) {
     let success = 0;
     for (const id of selected) {
       try {
-        const res = await fetch(`/intakeapp/api/admin/leads/${id}/status`, {
+        const res = await fetch(`/api/admin/leads/${id}/status`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status }),

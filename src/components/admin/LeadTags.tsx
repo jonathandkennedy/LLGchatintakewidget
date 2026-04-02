@@ -20,7 +20,7 @@ export function LeadTags({ leadId }: { leadId: string }) {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    fetch(`/intakeapp/api/admin/leads/tags?leadId=${leadId}`)
+    fetch(`/api/admin/leads/tags?leadId=${leadId}`)
       .then((r) => r.json())
       .then((j) => setTags(j.tags ?? []))
       .catch(() => {});
@@ -30,7 +30,7 @@ export function LeadTags({ leadId }: { leadId: string }) {
     if (!input.trim()) return;
     setAdding(true);
     try {
-      const res = await fetch("/intakeapp/api/admin/leads/tags", {
+      const res = await fetch("/api/admin/leads/tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadId, tag: input, color }),
@@ -42,7 +42,7 @@ export function LeadTags({ leadId }: { leadId: string }) {
   }
 
   async function removeTag(tagId: string) {
-    await fetch(`/intakeapp/api/admin/leads/tags?tagId=${tagId}`, { method: "DELETE" });
+    await fetch(`/api/admin/leads/tags?tagId=${tagId}`, { method: "DELETE" });
     setTags((p) => p.filter((t) => t.id !== tagId));
   }
 

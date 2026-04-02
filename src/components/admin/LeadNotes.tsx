@@ -15,7 +15,7 @@ export function LeadNotes({ leadId }: { leadId: string }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch(`/intakeapp/api/admin/leads/notes?leadId=${leadId}`)
+    fetch(`/api/admin/leads/notes?leadId=${leadId}`)
       .then((res) => res.json())
       .then((json) => setNotes(json.notes ?? []))
       .catch(() => {});
@@ -26,7 +26,7 @@ export function LeadNotes({ leadId }: { leadId: string }) {
     if (!content.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch("/intakeapp/api/admin/leads/notes", {
+      const res = await fetch("/api/admin/leads/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadId, content }),

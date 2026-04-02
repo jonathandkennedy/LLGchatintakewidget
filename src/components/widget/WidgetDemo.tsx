@@ -17,10 +17,10 @@ function findLastIdx<T>(arr: T[], predicate: (item: T) => boolean): number {
 }
 
 // Configure media URLs here
-const WELCOME_VIDEO_URL = ""; // e.g. "/intakeapp/videos/welcome.mp4"
-const CONNECTING_VIDEO_URL = ""; // e.g. "/intakeapp/videos/connecting.mp4"
-const HEADER_IMAGE_URL = "/intakeapp/images/lawyer-logo.webp";
-const AVATAR_IMAGE_URL = "/intakeapp/images/lawyer-logo.webp";
+const WELCOME_VIDEO_URL = ""; // e.g. "/videos/welcome.mp4"
+const CONNECTING_VIDEO_URL = ""; // e.g. "/videos/connecting.mp4"
+const HEADER_IMAGE_URL = "/images/lawyer-logo.webp";
+const AVATAR_IMAGE_URL = "/images/lawyer-logo.webp";
 
 type ChatMessage = {
   id: string;

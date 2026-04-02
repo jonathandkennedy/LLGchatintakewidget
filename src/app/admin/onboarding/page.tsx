@@ -21,7 +21,7 @@ export default function OnboardingPage() {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/intakeapp/api/admin/onboarding", {
+      const res = await fetch("/api/admin/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "create_client", name: clientName, slug: clientSlug }),
@@ -40,7 +40,7 @@ export default function OnboardingPage() {
   async function saveBranding() {
     setSaving(true);
     try {
-      await fetch("/intakeapp/api/admin/onboarding", {
+      await fetch("/api/admin/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "save_branding", clientId, primaryColor, headline, body }),
@@ -53,7 +53,7 @@ export default function OnboardingPage() {
   async function createFlow() {
     setSaving(true);
     try {
-      await fetch("/intakeapp/api/admin/onboarding", {
+      await fetch("/api/admin/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "create_flow", clientId }),
@@ -64,7 +64,7 @@ export default function OnboardingPage() {
   }
 
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const snippet = `<script src="${appUrl}/intakeapp/embed/widget.js" data-client-slug="${clientSlug}" data-api-base="${appUrl}" defer></script>`;
+  const snippet = `<script src="${appUrl}/embed/widget.js" data-client-slug="${clientSlug}" data-api-base="${appUrl}" defer></script>`;
 
   return (
     <div className="admin-content">

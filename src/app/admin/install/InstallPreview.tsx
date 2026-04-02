@@ -17,7 +17,7 @@ export function InstallPreview({ clients, appUrl, widgetUrl }: Props) {
 
   const selectedClient = clients.find((c) => c.slug === selectedSlug);
   const snippet = `<script src="${widgetUrl}" data-client-slug="${selectedSlug}" data-api-base="${appUrl}" defer></script>`;
-  const widgetIframeUrl = `${appUrl}/intakeapp/widget/${selectedSlug}`;
+  const widgetIframeUrl = `${appUrl}/widget/${selectedSlug}`;
 
   function handleCopy() {
     navigator.clipboard.writeText(snippet).then(() => {
@@ -54,7 +54,7 @@ export function InstallPreview({ clients, appUrl, widgetUrl }: Props) {
             <button className="primary-button" style={{ width: "auto" }} onClick={() => setShowPreview(!showPreview)}>
               {showPreview ? "Hide Preview" : "Show Live Preview"}
             </button>
-            <a href={`/intakeapp/widget/${selectedSlug}`} target="_blank" rel="noreferrer" className="admin-link">
+            <a href={`/widget/${selectedSlug}`} target="_blank" rel="noreferrer" className="admin-link">
               Open in new tab &rarr;
             </a>
           </div>

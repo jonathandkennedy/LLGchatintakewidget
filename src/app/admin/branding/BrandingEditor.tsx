@@ -47,7 +47,7 @@ export function BrandingEditor({ clientId, initial }: Props) {
       formData.set("privacyUrl", values.privacyUrl);
       formData.set("termsUrl", values.termsUrl);
 
-      await fetch("/intakeapp/api/admin/branding", {
+      await fetch("/api/admin/branding", {
         method: "POST",
         body: formData,
       });

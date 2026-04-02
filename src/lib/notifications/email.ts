@@ -118,7 +118,7 @@ function buildEmailHtml(data: LeadEmailData): string {
 
       <!-- CTA -->
       <div style="padding:24px 28px;text-align:center;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? ""}/intakeapp/admin/leads/${data.leadId}"
+        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? ""}/admin/leads/${data.leadId}"
            style="display:inline-block;padding:12px 28px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;">
           View Lead Details
         </a>
@@ -149,7 +149,7 @@ function buildEmailText(data: LeadEmailData): string {
     `When: ${formatValue(data.dateRange)}`,
     data.incidentSummary ? `\nSummary:\n${data.incidentSummary}` : "",
     data.additionalNotes ? `\nNotes:\n${data.additionalNotes}` : "",
-    `\nView: ${process.env.NEXT_PUBLIC_APP_URL ?? ""}/intakeapp/admin/leads/${data.leadId}`,
+    `\nView: ${process.env.NEXT_PUBLIC_APP_URL ?? ""}/admin/leads/${data.leadId}`,
   ].filter(Boolean).join("\n");
 }
 

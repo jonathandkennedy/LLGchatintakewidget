@@ -102,7 +102,7 @@ export function verifyOTP(email: string, code: string): boolean {
 
 export function buildMagicLinkUrl(token: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return `${baseUrl}/intakeapp/admin/login?token=${token}`;
+  return `${baseUrl}/admin/login?token=${token}`;
 }
 
 export async function sendMagicLinkEmail(email: string, url: string): Promise<void> {

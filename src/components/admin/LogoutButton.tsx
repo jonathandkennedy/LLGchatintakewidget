@@ -6,7 +6,7 @@ export function LogoutButton() {
   const router = useRouter();
 
   async function handleLogout() {
-    await fetch("/intakeapp/api/admin/auth", {
+    await fetch("/api/admin/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "logout" }),

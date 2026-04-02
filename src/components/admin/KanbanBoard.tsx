@@ -41,7 +41,7 @@ export function KanbanBoard({ leads }: Props) {
   async function moveLead(leadId: string, newStatus: string) {
     setMoving(leadId);
     try {
-      await fetch(`/intakeapp/api/admin/leads/${leadId}/status`, {
+      await fetch(`/api/admin/leads/${leadId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
