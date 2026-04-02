@@ -3,6 +3,7 @@ import { normalizeUsPhone } from "@/lib/utils/phone";
 import { sendLeadNotificationEmail } from "@/lib/notifications/email";
 import { sendLeadFollowUpSms } from "@/lib/notifications/sms";
 import { scoreLeadData } from "@/lib/scoring/lead-score";
+import { getActiveTest, selectVariant, recordVariantAssignment, recordVariantConversion } from "@/lib/ab-testing/engine";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -39,6 +40,23 @@ export async function createLeadSession(input: CreateLeadSessionInput) {
     .single();
 
   if (error || !data) throw error ?? new Error("Failed to create session");
+
+  // A/B test: assign variant if an active test exists
+  try {
+    const test = await getActiveTest(input.clientId);
+    if (test && test.variants.length > 0) {
+      const variant = selectVariant(test.variants);
+      await recordVariantAssignment(test.id, variant.id, data.id);
+      // If variant has a different flow, update the session
+      if (variant.flowId) {
+        await supabaseAdmin.from("lead_sessions").update({ flow_id: variant.flowId }).eq("id", data.id);
+        data.flow_id = variant.flowId;
+      }
+    }
+  } catch (err) {
+    console.error("[ab-test] Failed to assign variant:", err);
+  }
+
   return data;
 }
 
@@ -114,6 +132,9 @@ export async function finalizeLeadFromSession(sessionId: string) {
     .eq("id", sessionId);
 
   if (sessionUpdateError) throw sessionUpdateError;
+
+  // Track A/B test conversion
+  recordVariantConversion(sessionId).catch((err) => console.error("[ab-test] Failed to record conversion:", err));
 
   // Send email notification (fire and forget - don't block the response)
   sendLeadNotificationEmail({
