@@ -1782,6 +1782,96 @@ h3 { font-size: 18px; }
 
 .admin-link { font-size: 14px; font-weight: 600; }
 
+/* === Advanced Filters === */
+
+.advanced-filters {
+  margin: 16px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-row-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.filter-input {
+  flex: 1;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.filter-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  flex: 1;
+  min-width: 130px;
+  max-width: 180px;
+}
+
+/* === Trend Chart === */
+
+.trend-chart {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 140px;
+}
+
+.trend-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trend-bar-value {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text);
+  height: 14px;
+}
+
+.trend-bar-track {
+  width: 100%;
+  flex: 1;
+  background: var(--border-light);
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 80px;
+}
+
+.trend-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--primary), #60a5fa);
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+  transition: height 0.5s ease;
+}
+
+.trend-bar-label {
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+  transform: rotate(-45deg);
+  transform-origin: center;
+  height: 24px;
+}
+
 /* === Bulk Actions === */
 
 .bulk-bar {

@@ -41,8 +41,36 @@ async function getDashboardStats() {
   };
 }
 
+async function getDailyTrend() {
+  const days = 14;
+  const result: Array<{ date: string; label: string; count: number }> = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayStart = dateStr + "T00:00:00";
+    const dayEnd = dateStr + "T23:59:59";
+
+    const { count } = await supabaseAdmin
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", dayStart)
+      .lte("created_at", dayEnd);
+
+    result.push({
+      date: dateStr,
+      label: d.toLocaleDateString("en", { month: "short", day: "numeric" }),
+      count: count ?? 0,
+    });
+  }
+  return result;
+}
+
 export default async function AdminDashboardPage() {
   const stats = await getDashboardStats();
+  const trend = await getDailyTrend();
+  const trendMax = Math.max(...trend.map((d) => d.count), 1);
 
   return (
     <div className="admin-content">
@@ -84,6 +112,22 @@ export default async function AdminDashboardPage() {
           <div className="kpi-value">{stats.widgetOpensWeek}</div>
         </div>
       </div>
+
+      {/* Daily Lead Trend */}
+      <section className="admin-card" style={{ marginTop: 24 }}>
+        <h2>Leads (Last 14 Days)</h2>
+        <div className="trend-chart" style={{ marginTop: 16 }}>
+          {trend.map((day) => (
+            <div key={day.date} className="trend-bar-col">
+              <div className="trend-bar-value">{day.count > 0 ? day.count : ""}</div>
+              <div className="trend-bar-track">
+                <div className="trend-bar-fill" style={{ height: `${(day.count / trendMax) * 100}%` }} />
+              </div>
+              <div className="trend-bar-label">{day.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <SLAAlerts />
 
