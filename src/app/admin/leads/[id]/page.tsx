@@ -66,6 +66,23 @@ export default async function AdminLeadDetailPage({ params }: { params: { id: st
 
       <LeadScoreCard lead={lead} />
 
+      {lead.sentiment_urgency != null && (
+        <section className="panel">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h2>Sentiment Analysis</h2>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className={`score-badge score-lg score-${(lead.sentiment_urgency ?? 0) >= 7 ? "hot" : (lead.sentiment_urgency ?? 0) >= 4 ? "warm" : "cool"}`}>{lead.sentiment_urgency}/10</span>
+              <span className="muted" style={{ fontWeight: 600 }}>{lead.sentiment_tone}</span>
+            </div>
+          </div>
+          {lead.sentiment_signals && (lead.sentiment_signals as string[]).length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
+              {(lead.sentiment_signals as string[]).map((s: string, i: number) => <span key={i} className="status-chip">{s}</span>)}
+            </div>
+          )}
+        </section>
+      )}
+
       {lead.ai_summary && (
         <section className="panel">
           <h2>AI Analysis</h2>

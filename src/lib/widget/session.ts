@@ -8,6 +8,7 @@ import { fireLeadCreatedWebhook } from "@/lib/integrations/webhooks";
 import { autoAssignLead } from "@/lib/routing/lead-assignment";
 import { checkDuplicate, flagDuplicate } from "@/lib/monitoring/duplicates";
 import { classifyAndStoreLead } from "@/lib/ai/classify";
+import { analyzeSentiment } from "@/lib/ai/sentiment";
 
 type CreateLeadSessionInput = {
   clientId: string;
@@ -148,6 +149,16 @@ export async function finalizeLeadFromSession(sessionId: string) {
       flagDuplicate(lead.id, dup.matchedLeadId, dup.matchType);
     }
   }).catch((err) => console.error("[duplicate] Check failed:", err));
+
+  // Sentiment analysis (synchronous - fast, no API call)
+  if (lead.incident_summary) {
+    const sentiment = analyzeSentiment(lead.incident_summary + " " + (lead.additional_notes ?? ""));
+    void supabaseAdmin.from("leads").update({
+      sentiment_urgency: sentiment.urgencyScore,
+      sentiment_tone: sentiment.emotionalTone,
+      sentiment_signals: sentiment.urgencySignals,
+    }).eq("id", lead.id);
+  }
 
   // AI classification (fire and forget)
   if (lead.incident_summary) {

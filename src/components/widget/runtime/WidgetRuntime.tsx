@@ -755,7 +755,20 @@ export function WidgetRuntime({ clientSlug }: Props) {
         </div>
       )}
 
-      {/* Footer */}
+      {/* Progress + Footer */}
+      {step.type !== "welcome" && step.type !== "connected" && step.type !== "fallback" && step.type !== "callback_confirmation" && config && (() => {
+        const contentSteps = config.flow.steps.filter((s) => !["connecting", "connected", "fallback", "callback_confirmation"].includes(s.type));
+        const currentIdx = contentSteps.findIndex((s) => s.key === currentKey);
+        const pct = Math.min(Math.round(((currentIdx >= 0 ? currentIdx : 0) / contentSteps.length) * 100), 100);
+        return (
+          <div className="widget-progress-footer">
+            <div className="progress-bar" style={{ margin: 0 }}>
+              <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="progress-label">{pct}% {lang === "es" ? "completado" : "complete"}</span>
+          </div>
+        );
+      })()}
       <div className="widget-footer">
         {config.branding.privacyUrl ? <a href={config.branding.privacyUrl} target="_blank" rel="noreferrer">{t.privacy}</a> : null}
         {config.branding.termsUrl ? <a href={config.branding.termsUrl} target="_blank" rel="noreferrer">{t.terms}</a> : null}

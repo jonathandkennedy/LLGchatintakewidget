@@ -563,6 +563,21 @@ h3 { font-size: 18px; }
 .chat-submit-bar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Widget footer */
+.widget-progress-footer {
+  padding: 8px 18px 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .widget-footer {
   margin-top: 0;
   padding: 8px 16px;

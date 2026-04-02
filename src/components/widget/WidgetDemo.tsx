@@ -618,7 +618,20 @@ export function WidgetDemo() {
         </div>
       )}
 
-      {/* Footer */}
+      {/* Progress + Footer */}
+      {step.type !== "welcome" && step.type !== "connected" && step.type !== "fallback" && step.type !== "callback_confirmation" && (() => {
+        const totalSteps = DEFAULT_FLOW.steps.filter((s) => !["connecting", "connected", "fallback", "callback_confirmation"].includes(s.type)).length;
+        const currentIdx = DEFAULT_FLOW.steps.findIndex((s) => s.key === currentKey);
+        const pct = Math.min(Math.round((currentIdx / totalSteps) * 100), 100);
+        return (
+          <div className="widget-progress-footer">
+            <div className="progress-bar" style={{ margin: 0 }}>
+              <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="progress-label">{pct}% complete</span>
+          </div>
+        );
+      })()}
       <div className="widget-footer">
         <span>{t.poweredBy} <strong>IntakeLLG</strong></span>
       </div>
