@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/admin/audit-log", label: "Audit Log", icon: "H" },
   { href: "/admin/errors", label: "Errors", icon: "X" },
   { href: "/admin/api-docs", label: "API Docs", icon: "?" },
+  { href: "/admin/status", label: "Status", icon: "~" },
   { href: "/admin/onboarding", label: "Setup Wizard", icon: "+" },
   { href: "/admin/email-templates", label: "Emails", icon: "E" },
   { href: "/admin/install", label: "Install", icon: "I" },

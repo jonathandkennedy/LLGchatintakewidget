@@ -3,6 +3,7 @@ import { getResponseTimeStats, formatMinutes } from "@/lib/monitoring/response-t
 import { getROIMetrics } from "@/lib/scoring/roi";
 import { formatCurrency } from "@/lib/scoring/lead-value";
 import { getLeadsByState, getStateAbbrev } from "@/lib/admin/geo-data";
+import { getHourlyHeatmap, DAY_LABELS } from "@/lib/admin/hourly-heatmap";
 
 export const dynamic = "force-dynamic";
 
@@ -390,6 +391,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
         </section>
       </div>
 
+      {/* Hourly Heatmap */}
+      <HeatmapSection clientId={searchParams.clientId} days={days} />
+
       {/* Geographic + ROI */}
       <GeoSection clientId={searchParams.clientId} days={days} />
       <ROISection clientId={searchParams.clientId} days={days} />
@@ -442,6 +446,49 @@ async function ResponseTimeSection({ clientId, days }: { clientId?: string; days
             ))}
           </tbody>
         </table>
+      </div>
+    </section>
+  );
+}
+
+async function HeatmapSection({ clientId, days }: { clientId?: string; days: number }) {
+  const cells = await getHourlyHeatmap(clientId, days);
+  const maxCount = Math.max(...cells.map((c) => c.count), 1);
+
+  if (cells.every((c) => c.count === 0)) return null;
+
+  return (
+    <section style={{ marginTop: 32 }}>
+      <h2 style={{ marginBottom: 16 }}>Submission Heatmap (Day/Hour)</h2>
+      <div className="admin-card" style={{ overflowX: "auto" }}>
+        <div className="heatmap-grid">
+          <div className="heatmap-row">
+            <div className="heatmap-label" />
+            {Array.from({ length: 24 }, (_, h) => (
+              <div key={h} className="heatmap-hour-label">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h - 12}p`}</div>
+            ))}
+          </div>
+          {DAY_LABELS.map((dayLabel, dayIdx) => (
+            <div key={dayIdx} className="heatmap-row">
+              <div className="heatmap-label">{dayLabel}</div>
+              {Array.from({ length: 24 }, (_, h) => {
+                const cell = cells.find((c) => c.day === dayIdx && c.hour === h);
+                const count = cell?.count ?? 0;
+                const intensity = count > 0 ? 0.15 + (count / maxCount) * 0.85 : 0;
+                return (
+                  <div
+                    key={h}
+                    className="heatmap-cell"
+                    style={{ background: count > 0 ? `rgba(37, 99, 235, ${intensity})` : undefined }}
+                    title={`${dayLabel} ${h}:00 — ${count} leads`}
+                  >
+                    {count > 0 ? count : ""}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
