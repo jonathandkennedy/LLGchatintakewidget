@@ -42,14 +42,14 @@ export default function HomePage() {
         <section>
           <div className="widget-card" style={{ maxWidth: 390, padding: 28 }}>
             <div className="eyebrow">Build status</div>
-            <h2 style={{ marginTop: 8, marginBottom: 12 }}>Ready for Claude Code</h2>
-            <p className="muted text-sm" style={{ marginBottom: 16 }}>Core file structure is initialized so your dev workflow can patch instead of scaffolding.</p>
+            <h2 style={{ marginTop: 8, marginBottom: 12 }}>Ready for Liftoff</h2>
+            <p className="muted text-sm" style={{ marginBottom: 16 }}>88 features built and production-ready. Full-stack legal intake platform.</p>
             <ul className="bullet-list">
-              <li>App Router routes created</li>
-              <li>Supabase admin client added</li>
-              <li>Flow engine + validation included</li>
-              <li>Telnyx service layer scaffolded</li>
-              <li>Demo widget UI included</li>
+              <li>Conversational chat widget with AI</li>
+              <li>20-page admin dashboard</li>
+              <li>Lead scoring, A/B testing, analytics</li>
+              <li>Telnyx voice + SMS integration</li>
+              <li>Slack, email, webhook notifications</li>
             </ul>
           </div>
         </section>
