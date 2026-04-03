@@ -1782,6 +1782,43 @@ h3 { font-size: 18px; }
 
 .admin-link { font-size: 14px; font-weight: 600; }
 
+/* === Geographic Grid === */
+
+.geo-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.geo-bar-item {}
+
+.geo-bar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.geo-state-abbrev {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--primary);
+  width: 28px;
+}
+
+.geo-state-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.geo-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 /* === Activity Feed === */
 
 .activity-feed { min-height: 200px; }

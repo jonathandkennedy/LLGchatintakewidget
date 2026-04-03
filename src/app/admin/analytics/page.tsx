@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getResponseTimeStats, formatMinutes } from "@/lib/monitoring/response-time";
 import { getROIMetrics } from "@/lib/scoring/roi";
 import { formatCurrency } from "@/lib/scoring/lead-value";
+import { getLeadsByState, getStateAbbrev } from "@/lib/admin/geo-data";
 
 export const dynamic = "force-dynamic";
 
@@ -389,7 +390,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
         </section>
       </div>
 
-      {/* ROI */}
+      {/* Geographic + ROI */}
+      <GeoSection clientId={searchParams.clientId} days={days} />
       <ROISection clientId={searchParams.clientId} days={days} />
 
       {/* Response Time */}
@@ -440,6 +442,35 @@ async function ResponseTimeSection({ clientId, days }: { clientId?: string; days
             ))}
           </tbody>
         </table>
+      </div>
+    </section>
+  );
+}
+
+async function GeoSection({ clientId, days }: { clientId?: string; days: number }) {
+  const states = await getLeadsByState(clientId, days);
+  if (states.length === 0) return null;
+
+  const maxCount = states[0]?.count ?? 1;
+
+  return (
+    <section style={{ marginTop: 32 }}>
+      <h2 style={{ marginBottom: 16 }}>Leads by State</h2>
+      <div className="admin-card">
+        <div className="geo-grid">
+          {states.map((s) => (
+            <div key={s.state} className="geo-bar-item">
+              <div className="geo-bar-header">
+                <span className="geo-state-abbrev">{getStateAbbrev(s.state)}</span>
+                <span className="geo-state-name">{s.state}</span>
+                <span className="geo-count">{s.count} ({s.pct}%)</span>
+              </div>
+              <div className="bar-track" style={{ height: 8 }}>
+                <div className="bar-fill" style={{ width: `${(s.count / maxCount) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

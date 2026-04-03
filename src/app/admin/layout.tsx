@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { isAdminAuthenticated } from "@/lib/auth/admin-auth";
 import { NotificationBell } from "@/components/admin/NotificationBell";
+import { AdminKeyboardShortcuts } from "@/components/admin/AdminKeyboardShortcuts";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 
 const NAV_ITEMS = [
@@ -55,6 +56,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <main className="admin-main">
+        <AdminKeyboardShortcuts />
         <div className="admin-topbar">
           <NotificationBell />
         </div>
