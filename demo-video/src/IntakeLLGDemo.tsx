@@ -328,7 +328,7 @@ function ClosingSlide() {
         <div style={{ display: "flex", gap: 16, marginTop: 40 }}>
           <Badge color={SUCCESS}>Production Ready</Badge>
           <Badge color={PRIMARY}>Open Source</Badge>
-          <Badge color={WARNING}>Built with Claude</Badge>
+          <Badge color={WARNING}>Built by OptimusPrime</Badge>
         </div>
       </FadeIn>
     </AbsoluteFill>
