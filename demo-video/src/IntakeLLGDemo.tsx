@@ -125,9 +125,9 @@ function TitleSlide() {
       </FadeIn>
       <FadeIn delay={35}>
         <div style={{ display: "flex", gap: 16, marginTop: 40 }}>
-          <Badge color={SUCCESS}>75 Features</Badge>
-          <Badge color={PRIMARY}>18 Admin Pages</Badge>
-          <Badge color={WARNING}>6 Integrations</Badge>
+          <Badge color={SUCCESS}>105 Features</Badge>
+          <Badge color={PRIMARY}>22 Admin Pages</Badge>
+          <Badge color={WARNING}>7 Integrations</Badge>
         </div>
       </FadeIn>
     </AbsoluteFill>
@@ -157,9 +157,11 @@ function WidgetSlide() {
             "Appointment picker",
             "Auto-save & resume",
             "Back & undo",
-            "Progress bar",
-            "Welcome video",
-            "Keyboard shortcuts",
+            "Step counter",
+            "Creatify AI video",
+            "Sound effects",
+            "Confetti on complete",
+            "Loading shimmer",
             "Mobile responsive",
             "Offline mode",
           ]} startDelay={20} />
@@ -195,6 +197,8 @@ function IntelligenceSlide() {
             "Case value estimation",
             "Duplicate detection",
             "ROI by traffic source",
+            "Conversion attribution",
+            "Retargeting on abandon",
           ]} startDelay={38} />
         </div>
       </FadeIn>
@@ -210,7 +214,7 @@ function AdminSlide() {
       </FadeIn>
       <FadeIn delay={8}>
         <h2 style={{ fontSize: 56, fontWeight: 800, color: TEXT, fontFamily, margin: "12px 0 32px", letterSpacing: "-0.02em" }}>
-          18 Admin Pages
+          22 Admin Pages
         </h2>
       </FadeIn>
       <FadeIn delay={15}>
@@ -232,7 +236,10 @@ function AdminSlide() {
           "Global search",
           "Lead timeline & replay",
           "Lead notes & tags",
-          "CSV export",
+          "CSV + JSON export",
+          "Duplicate review",
+          "System status",
+          "API documentation",
         ]} startDelay={18} />
       </FadeIn>
     </AbsoluteFill>
@@ -257,6 +264,7 @@ function IntegrationsSlide() {
         <StatCard label="Analytics" value="GA4 + FB" delay={30} color="#f59e0b" />
         <StatCard label="CRM / Zapier" value="Webhooks" delay={35} color="#8b5cf6" />
         <StatCard label="AI" value="Claude" delay={40} color="#f97316" />
+        <StatCard label="Video" value="Creatify" delay={45} color="#06b6d4" />
       </div>
     </AbsoluteFill>
   );
@@ -313,7 +321,7 @@ function ClosingSlide() {
       </FadeIn>
       <FadeIn delay={10}>
         <p style={{ fontSize: 32, color: MUTED, fontFamily, marginTop: 16 }}>
-          75 Features. One Platform.
+          105 Features. One Platform.
         </p>
       </FadeIn>
       <FadeIn delay={20}>
