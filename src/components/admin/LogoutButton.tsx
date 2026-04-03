@@ -11,7 +11,7 @@ export function LogoutButton() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "logout" }),
     });
-    router.push("/admin/login");
+    router.push("/login");
     router.refresh();
   }
 

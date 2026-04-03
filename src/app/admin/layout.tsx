@@ -32,7 +32,7 @@ const NAV_ITEMS = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   if (!isAdminAuthenticated()) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   return (
