@@ -8,6 +8,7 @@ import { fireLeadCreatedWebhook } from "@/lib/integrations/webhooks";
 import { sendSlackLeadNotification } from "@/lib/integrations/slack";
 import { autoAssignLead } from "@/lib/routing/lead-assignment";
 import { checkDuplicate, flagDuplicate } from "@/lib/monitoring/duplicates";
+import { sendLeadConfirmationEmail } from "@/lib/notifications/lead-confirmation";
 import { classifyAndStoreLead } from "@/lib/ai/classify";
 import { analyzeSentiment } from "@/lib/ai/sentiment";
 import { scheduleFollowUps } from "@/lib/scheduling/followup";
@@ -194,7 +195,19 @@ export async function finalizeLeadFromSession(sessionId: string) {
   // Track A/B test conversion
   recordVariantConversion(sessionId).catch((err) => console.error("[ab-test] Failed to record conversion:", err));
 
-  // Send email notification (fire and forget - don't block the response)
+  // Send confirmation email to lead (fire and forget)
+  if (lead.email) {
+    sendLeadConfirmationEmail({
+      leadId: lead.id,
+      name: [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "there",
+      email: lead.email,
+      matterType: lead.matter_type,
+      firmName: "Our Legal Team",
+      createdAt: lead.created_at,
+    }).catch((err) => console.error("[email] Failed to send lead confirmation:", err));
+  }
+
+  // Send email notification to firm (fire and forget - don't block the response)
   sendLeadNotificationEmail({
     leadId: lead.id,
     firstName: lead.first_name,

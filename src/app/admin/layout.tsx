@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/admin/leads", label: "Leads", icon: "L" },
   { href: "/admin/kanban", label: "Kanban", icon: "K" },
   { href: "/admin/priority-queue", label: "Priority", icon: "!" },
+  { href: "/admin/duplicates", label: "Duplicates", icon: "2" },
   { href: "/admin/search", label: "Search", icon: "S" },
   { href: "/admin/clients", label: "Clients", icon: "C" },
   { href: "/admin/analytics", label: "Analytics", icon: "A" },

@@ -407,10 +407,20 @@ export function WidgetRuntime({ clientSlug }: Props) {
   if (loading) {
     return (
       <div className="widget-card">
-        <div className="chat-thread">
-          <div className="loading-skeleton">
-            <div className="loading-spinner" />
-            <div className="loading-text">{t.loading}</div>
+        <div className="shimmer-block" style={{ height: 120, borderRadius: 0 }} />
+        <div className="widget-loading-skeleton">
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div className="shimmer-circle" />
+            <div style={{ flex: 1 }}>
+              <div className="shimmer-line" style={{ width: "80%", marginBottom: 6 }} />
+              <div className="shimmer-line" style={{ width: "60%" }} />
+            </div>
+          </div>
+          <div className="shimmer-line" style={{ width: "90%" }} />
+          <div className="shimmer-line" style={{ width: "70%" }} />
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div className="shimmer-line" style={{ width: 100, height: 36, borderRadius: 999 }} />
+            <div className="shimmer-line" style={{ width: 120, height: 36, borderRadius: 999 }} />
           </div>
         </div>
       </div>
