@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { BrandingEditor } from "./BrandingEditor";
+import { VideoGenerator } from "@/components/admin/VideoGenerator";
 
 export const dynamic = "force-dynamic";
 
@@ -10,16 +11,16 @@ async function getClients() {
   return data ?? [];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getBranding(clientId: string) {
   const { data } = await supabaseAdmin.from("client_branding").select("*").eq("client_id", clientId).single();
-  return data;
+  return data as any;
 }
 
 export default async function BrandingPage({ searchParams }: { searchParams: SearchParams }) {
   const clients = await getClients();
   const clientId = searchParams.clientId ?? clients[0]?.id;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const branding = clientId ? ((await getBranding(clientId)) as Record<string, any> | null) : null;
+  const branding = clientId ? await getBranding(clientId) : null;
 
   return (
     <div className="admin-content">
@@ -39,6 +40,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: Sea
       {!clientId ? (
         <section className="admin-card"><p className="muted">Select a client above to configure branding.</p></section>
       ) : (
+        <>
         <BrandingEditor
           clientId={clientId}
           initial={{
@@ -54,6 +56,17 @@ export default async function BrandingPage({ searchParams }: { searchParams: Sea
             termsUrl: branding?.terms_url ?? "",
           }}
         />
+
+        {/* Video Generation */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 24 }}>
+          <div className="admin-card">
+            <VideoGenerator clientId={clientId} videoType="welcome" currentUrl={branding?.welcome_video_url ?? null} />
+          </div>
+          <div className="admin-card">
+            <VideoGenerator clientId={clientId} videoType="connecting" currentUrl={branding?.connecting_video_url ?? null} />
+          </div>
+        </div>
+        </>
       )}
     </div>
   );
